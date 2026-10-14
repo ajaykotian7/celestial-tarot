@@ -1,0 +1,22 @@
+[project]
+name = "tarot-space"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "ajaykotian", email = "ajaykotian7@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi[standard]>=0.143.0",
+    "openai>=3.31.0",
+    "pydantic>=2.14.1",
+    "python-dotenv>=1.2.4",
+]
+
+[project.scripts]
+tarot-space = "tarot_space:main"
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14.0"]
+build-backend = "uv_build"

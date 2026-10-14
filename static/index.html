@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Celestial Tarot AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@300;400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0c16;
+            --card-bg: #151828;
+            --accent: #d4af37;
+            --accent-glow: rgba(212, 175, 55, 0.35);
+            --text: #e6e8f2;
+            --text-muted: #9aa0b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: radial-gradient(circle at top, #181b33 0%, var(--bg) 80%);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 16px;
+        }
+
+        /* --- FULL SCREEN ACCESS BLOCKER --- */
+        #blocker-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at center, #1b1e38 0%, #06070d 90%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            transition: opacity 0.4s ease, visibility 0.4s;
+        }
+
+        .gatekeeper-card {
+            background: rgba(21, 24, 40, 0.95);
+            border: 1px solid var(--accent);
+            border-radius: 18px;
+            padding: 40px 32px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.9), 0 0 25px var(--accent-glow);
+        }
+
+        .gatekeeper-icon {
+            font-size: 2.8rem;
+            margin-bottom: 12px;
+            display: inline-block;
+            animation: pulseGlow 2s infinite ease-in-out;
+        }
+
+        @keyframes pulseGlow {
+
+            0%,
+            100% {
+                transform: scale(1);
+                filter: drop-shadow(0 0 5px var(--accent));
+            }
+
+            50% {
+                transform: scale(1.08);
+                filter: drop-shadow(0 0 15px var(--accent));
+            }
+        }
+
+        .gatekeeper-card h2 {
+            font-family: 'Cinzel', serif;
+            color: var(--accent);
+            font-size: 1.6rem;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .gatekeeper-card p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 24px;
+            line-height: 1.4;
+        }
+
+        .pin-input-field {
+            width: 100%;
+            background: #0d0f1a;
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            border-radius: 10px;
+            padding: 14px;
+            color: #fff;
+            font-size: 1.2rem;
+            letter-spacing: 4px;
+            text-align: center;
+            outline: none;
+            margin-bottom: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .pin-input-field:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .btn-unlock {
+            width: 100%;
+            background: linear-gradient(135deg, #d4af37, #aa8214);
+            border: none;
+            border-radius: 10px;
+            color: #0b0c16;
+            font-weight: 700;
+            padding: 14px;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            letter-spacing: 1.5px;
+            font-size: 1rem;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        .btn-unlock:active {
+            transform: scale(0.98);
+        }
+
+        .error-msg {
+            color: #ff6b6b;
+            font-size: 0.85rem;
+            margin-top: 14px;
+            display: none;
+        }
+
+        /* Top Lock Button */
+        .top-bar {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 8px;
+        }
+
+        .lock-btn {
+            background: rgba(21, 24, 40, 0.8);
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            color: var(--accent);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .lock-btn:hover {
+            background: rgba(212, 175, 55, 0.15);
+            border-color: var(--accent);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        header h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 2.2rem;
+            color: var(--accent);
+            letter-spacing: 2px;
+            text-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-top: 6px;
+        }
+
+        #main-container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* --- DECK SHUFFLE ANIMATION --- */
+        .animation-stage {
+            display: none;
+            height: 200px;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .deck-container {
+            position: relative;
+            width: 120px;
+            height: 180px;
+        }
+
+        .shuffle-card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #2b1f4d, #14172b);
+            border: 2px solid var(--accent);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+        }
+
+        .c1 {
+            animation: shuffleLeft 1.2s infinite ease-in-out;
+        }
+
+        .c2 {
+            animation: shuffleRight 1.2s infinite ease-in-out 0.2s;
+        }
+
+        .c3 {
+            animation: shuffleCenter 1.2s infinite ease-in-out 0.4s;
+        }
+
+        @keyframes shuffleLeft {
+
+            0%,
+            100% {
+                transform: translateX(0) rotate(0deg);
+                z-index: 1;
+            }
+
+            50% {
+                transform: translateX(-70px) rotate(-14deg) translateY(-8px);
+                z-index: 3;
+            }
+        }
+
+        @keyframes shuffleRight {
+
+            0%,
+            100% {
+                transform: translateX(0) rotate(0deg);
+                z-index: 1;
+            }
+
+            50% {
+                transform: translateX(70px) rotate(14deg) translateY(-8px);
+                z-index: 3;
+            }
+        }
+
+        @keyframes shuffleCenter {
+
+            0%,
+            100% {
+                transform: translateY(0) scale(1);
+                z-index: 2;
+            }
+
+            50% {
+                transform: translateY(-24px) scale(1.05);
+                z-index: 3;
+            }
+        }
+
+        /* --- CARDS DISPLAY TRAY --- */
+        .cards-tray {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .revealed-card {
+            background: var(--card-bg);
+            border: 1px solid var(--accent);
+            border-radius: 12px;
+            padding: 16px 12px;
+            text-align: center;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+            animation: flipIn 0.5s ease forwards;
+        }
+
+        .card-pos {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--accent);
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .card-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.05rem;
+            margin-bottom: 4px;
+        }
+
+        .card-orient {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        @keyframes flipIn {
+            from {
+                opacity: 0;
+                transform: translateY(12px) scale(0.96);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* --- DEDICATED TL;DR SUMMARY BLOCK --- */
+        .tldr-box {
+            display: none;
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(21, 24, 40, 0.95));
+            border: 1px solid var(--accent);
+            border-left: 5px solid var(--accent);
+            border-radius: 12px;
+            padding: 18px 20px;
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.15);
+            animation: flipIn 0.6s ease forwards;
+        }
+
+        .tldr-badge {
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .tldr-text {
+            color: #ffffff;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        /* --- CHAT DISPLAY & INPUT --- */
+        .chat-box {
+            background: rgba(21, 24, 40, 0.7);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 24px;
+            min-height: 180px;
+            max-height: 440px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        .narrative {
+            white-space: pre-line;
+        }
+
+        .input-bar {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 14px 16px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            flex: 1;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent);
+        }
+
+        button.consult-btn {
+            background: linear-gradient(135deg, #d4af37, #aa8214);
+            border: none;
+            border-radius: 10px;
+            color: #0b0c16;
+            font-weight: 700;
+            padding: 0 24px;
+            cursor: pointer;
+            font-family: 'Cinzel', serif;
+            letter-spacing: 1px;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Full-Page Gatekeeper Blocker Screen -->
+    <div id="blocker-screen">
+        <div class="gatekeeper-card">
+            <div class="gatekeeper-icon">🔮</div>
+            <h2>Sanctuary Locked</h2>
+            <p>This oracle is protected. Enter the access PIN to commune with the deck.</p>
+            <input type="password" id="gatekeeper-pin" class="pin-input-field" placeholder="••••" />
+            <button class="btn-unlock" id="unlock-btn" onclick="attemptUnlock()">ENTER SANCTUARY</button>
+            <div id="blocker-error" class="error-msg">Incorrect access code.</div>
+        </div>
+    </div>
+
+    <div class="top-bar">
+        <div class="lock-btn" onclick="relockSanctuary()">
+            <span>🔒</span> <span>Lock Oracle</span>
+        </div>
+    </div>
+
+    <header>
+        <h1>Celestial Tarot</h1>
+        <p>Ask your question and let the cards illuminate your path</p>
+    </header>
+
+    <div id="main-container">
+        <div id="cards-tray" class="cards-tray"></div>
+
+        <div id="shuffler" class="animation-stage">
+            <div class="deck-container">
+                <div class="shuffle-card c1">✨</div>
+                <div class="shuffle-card c2">🌙</div>
+                <div class="shuffle-card c3">🔮</div>
+            </div>
+        </div>
+
+        <div id="tldr-box" class="tldr-box">
+            <div class="tldr-badge">🔮 Core Takeaway (TL;DR)</div>
+            <div id="tldr-text" class="tldr-text"></div>
+        </div>
+
+        <div class="chat-box" id="chat-output">
+            <em>Enter a question below, such as: "What energy is surrounding my career right now?" or "Give me a 3-card
+                reading."</em>
+        </div>
+
+        <div class="input-bar">
+            <input type="text" id="user-input" placeholder="Ask the cards..." />
+            <button class="consult-btn" id="send-btn" onclick="sendInquiry()">CONSULT</button>
+        </div>
+    </div>
+
+    <script>
+        const history = [];
+
+        // --- GATEKEEPER VALIDATION ---
+        async function verifyPinWithServer(pin) {
+            const res = await fetch("/api/verify-pin", {
+                method: "POST",
+                headers: { "x-app-pin": pin || "" }
+            });
+            return res.ok;
+        }
+
+        async function attemptUnlock() {
+            const pinInput = document.getElementById("gatekeeper-pin");
+            const errEl = document.getElementById("blocker-error");
+            const btn = document.getElementById("unlock-btn");
+            const pin = pinInput.value.trim();
+
+            errEl.style.display = "none";
+            btn.disabled = true;
+            btn.textContent = "VERIFYING...";
+
+            try {
+                const isValid = await verifyPinWithServer(pin);
+                if (isValid) {
+                    localStorage.setItem("tarot_pin", pin);
+                    unlockUI();
+                } else {
+                    showBlockerError("Invalid PIN. Access denied.");
+                }
+            } catch (err) {
+                showBlockerError("Could not reach oracle server.");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "ENTER SANCTUARY";
+            }
+        }
+
+        function showBlockerError(msg) {
+            const errEl = document.getElementById("blocker-error");
+            errEl.textContent = msg;
+            errEl.style.display = "block";
+            const pinInput = document.getElementById("gatekeeper-pin");
+            pinInput.value = "";
+            pinInput.focus();
+        }
+
+        function unlockUI() {
+            const blocker = document.getElementById("blocker-screen");
+            blocker.style.opacity = "0";
+            setTimeout(() => {
+                blocker.style.visibility = "hidden";
+                blocker.style.display = "none";
+                document.getElementById("user-input").focus();
+            }, 400);
+        }
+
+        function relockSanctuary() {
+            localStorage.removeItem("tarot_pin");
+            location.reload();
+        }
+
+        // Auto-check stored PIN on load
+        window.addEventListener("DOMContentLoaded", async () => {
+            const storedPin = localStorage.getItem("tarot_pin");
+            if (storedPin) {
+                const isValid = await verifyPinWithServer(storedPin);
+                if (isValid) {
+                    unlockUI();
+                    return;
+                }
+            }
+            // If no valid stored PIN, focus input on blocker
+            document.getElementById("gatekeeper-pin").focus();
+        });
+
+        document.getElementById("gatekeeper-pin").addEventListener("keypress", (e) => {
+            if (e.key === "Enter") attemptUnlock();
+        });
+
+        // --- MAIN TAROT INQUIRY FLOW ---
+        async function sendInquiry() {
+            const input = document.getElementById("user-input");
+            const btn = document.getElementById("send-btn");
+            const chat = document.getElementById("chat-output");
+            const shuffler = document.getElementById("shuffler");
+            const tray = document.getElementById("cards-tray");
+            const tldrBox = document.getElementById("tldr-box");
+            const tldrText = document.getElementById("tldr-text");
+            const text = input.value.trim();
+
+            if (!text) return;
+
+            const pin = localStorage.getItem("tarot_pin") || "";
+
+            btn.disabled = true;
+            input.disabled = true;
+            tray.innerHTML = "";
+            tldrBox.style.display = "none";
+            shuffler.style.display = "flex";
+            chat.innerHTML = `<span style="color: var(--accent);">Shuffling the deck and channeling guidance...</span>`;
+
+            try {
+                const res = await fetch("/api/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-app-pin": pin
+                    },
+                    body: JSON.stringify({ message: text, history: history })
+                });
+
+                if (res.status === 401) {
+                    // If session expired or PIN changed, lock screen immediately
+                    relockSanctuary();
+                    return;
+                }
+
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.detail || `Server error (${res.status})`);
+                }
+
+                const data = await res.json();
+                shuffler.style.display = "none";
+
+                if (data.cards && data.cards.length > 0) {
+                    tray.innerHTML = data.cards.map(c => `
+            <div class="revealed-card">
+              <div class="card-pos">${c.position}</div>
+              <div class="card-title">${c.card}</div>
+              <div class="card-orient">(${c.orientation})</div>
+            </div>
+          `).join('');
+                }
+
+                if (data.tldr) {
+                    tldrText.textContent = data.tldr;
+                    tldrBox.style.display = "block";
+                }
+
+                chat.innerHTML = `<div class="narrative">${data.reply}</div>`;
+
+                history.push({ role: "user", content: text });
+                history.push({ role: "assistant", content: (data.tldr ? `[TL;DR: ${data.tldr}]\n` : "") + data.reply });
+
+            } catch (err) {
+                shuffler.style.display = "none";
+                chat.innerHTML = `<span style="color: #ff6b6b;">Oracle disrupted: ${err.message}</span>`;
+            } finally {
+                btn.disabled = false;
+                input.disabled = false;
+                input.value = "";
+                input.focus();
+            }
+        }
+
+        document.getElementById("user-input").addEventListener("keypress", (e) => {
+            if (e.key === "Enter") sendInquiry();
+        });
+    </script>
+</body>
+
+</html>
