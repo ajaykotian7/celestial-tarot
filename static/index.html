@@ -553,13 +553,23 @@
         </div>
 
         <div class="input-bar">
-            <input type="text" id="user-input" placeholder="Ask the cards..." autocomplete="off" />
+            <input type="text" id="user-input" placeholder="Ask the cards..." autocomplete="off" maxlength="1000" />
             <button class="consult-btn" id="send-btn" onclick="sendInquiry()">CONSULT</button>
         </div>
     </div>
 
     <script>
         const history = [];
+        // The server only sends the last 6 messages to the model, so don't send more
+        const MAX_HISTORY_MESSAGES = 6;
+
+        // Build an element with plain-text content (never parsed as HTML)
+        function el(tag, className, text) {
+            const node = document.createElement(tag);
+            if (className) node.className = className;
+            if (text !== undefined) node.textContent = text;
+            return node;
+        }
 
         // --- GATEKEEPER VALIDATION ---
         async function verifyPinWithServer(pin) {
@@ -567,7 +577,7 @@
                 method: "POST",
                 headers: { "x-app-pin": pin || "" }
             });
-            return res.ok;
+            return res.status;
         }
 
         async function attemptUnlock() {
@@ -581,10 +591,12 @@
             btn.textContent = "VERIFYING...";
 
             try {
-                const isValid = await verifyPinWithServer(pin);
-                if (isValid) {
+                const status = await verifyPinWithServer(pin);
+                if (status === 200) {
                     localStorage.setItem("tarot_pin", pin);
                     unlockUI();
+                } else if (status === 429) {
+                    showBlockerError("Too many attempts. Wait a minute and try again.");
                 } else {
                     showBlockerError("Invalid PIN. Access denied.");
                 }
@@ -623,8 +635,8 @@
         window.addEventListener("DOMContentLoaded", async () => {
             const storedPin = localStorage.getItem("tarot_pin");
             if (storedPin) {
-                const isValid = await verifyPinWithServer(storedPin);
-                if (isValid) {
+                const status = await verifyPinWithServer(storedPin);
+                if (status === 200) {
                     unlockUI();
                     return;
                 }
@@ -675,22 +687,22 @@
 
                 if (!res.ok) {
                     const errData = await res.json().catch(() => ({}));
-                    throw new Error(errData.detail || `Server error (${res.status})`);
+                    // 422 validation errors return `detail` as a list, not a string
+                    const detail = typeof errData.detail === "string" ? errData.detail : null;
+                    throw new Error(detail || `Server error (${res.status})`);
                 }
 
                 const data = await res.json();
                 shuffler.style.display = "none";
 
                 if (data.cards && data.cards.length > 0) {
-                    tray.innerHTML = data.cards.map(c => `
-            <div class="revealed-card">
-              <div class="card-info-left">
-                <div class="card-pos">${c.position}</div>
-                <div class="card-title">${c.card}</div>
-              </div>
-              <div class="card-orient">(${c.orientation})</div>
-            </div>
-          `).join('');
+                    tray.replaceChildren(...data.cards.map(c => {
+                        const card = el("div", "revealed-card");
+                        const info = el("div", "card-info-left");
+                        info.append(el("div", "card-pos", c.position), el("div", "card-title", c.card));
+                        card.append(info, el("div", "card-orient", `(${c.orientation})`));
+                        return card;
+                    }));
                 }
 
                 if (data.tldr) {
@@ -698,15 +710,20 @@
                     tldrBox.style.display = "block";
                 }
 
-                chat.innerHTML = `<div class="narrative">${data.reply}</div>`;
+                chat.replaceChildren(el("div", "narrative", data.reply));
                 chat.scrollTop = 0;
 
                 history.push({ role: "user", content: text });
                 history.push({ role: "assistant", content: (data.tldr ? `[TL;DR: ${data.tldr}]\n` : "") + data.reply });
+                if (history.length > MAX_HISTORY_MESSAGES) {
+                    history.splice(0, history.length - MAX_HISTORY_MESSAGES);
+                }
 
             } catch (err) {
                 shuffler.style.display = "none";
-                chat.innerHTML = `<span style="color: #ff6b6b;">Oracle disrupted: ${err.message}</span>`;
+                const errorMsg = el("span", null, `Oracle disrupted: ${err.message}`);
+                errorMsg.style.color = "#ff6b6b";
+                chat.replaceChildren(errorMsg);
             } finally {
                 btn.disabled = false;
                 input.disabled = false;

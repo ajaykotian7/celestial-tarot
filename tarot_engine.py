@@ -93,42 +93,252 @@ MAJOR_ARCANA = {
     },
 }
 
-SUITS = ["wands", "cups", "swords", "pentacles"]
-RANKS = [
-    "ace",
-    "two",
-    "three",
-    "four",
-    "five",
-    "six",
-    "seven",
-    "eight",
-    "nine",
-    "ten",
-    "page",
-    "knight",
-    "queen",
-    "king",
-]
+# (upright, reversed) meanings for every rank of every suit.
+MINOR_ARCANA_MEANINGS = {
+    "wands": {
+        "ace": (
+            "Inspiration, new opportunity, creative spark, potential.",
+            "Delays, lack of motivation, false starts.",
+        ),
+        "two": (
+            "Planning, future vision, bold decisions, discovery.",
+            "Fear of the unknown, poor planning, playing it safe.",
+        ),
+        "three": (
+            "Expansion, foresight, progress, opportunities abroad.",
+            "Setbacks, frustrated plans, lack of foresight.",
+        ),
+        "four": (
+            "Celebration, homecoming, harmony, milestones reached.",
+            "Instability at home, cancelled celebrations, transition.",
+        ),
+        "five": (
+            "Conflict, competition, tension, clashing egos.",
+            "Avoiding conflict, finding resolution, inner struggle.",
+        ),
+        "six": (
+            "Victory, public recognition, success, confidence.",
+            "Ego, fall from grace, lack of recognition.",
+        ),
+        "seven": (
+            "Defending your position, perseverance, standing your ground.",
+            "Overwhelm, giving up, feeling besieged.",
+        ),
+        "eight": (
+            "Swift action, momentum, rapid progress, incoming news.",
+            "Delays, frustration, scattered energy.",
+        ),
+        "nine": (
+            "Resilience, persistence, guarded courage, the last stretch.",
+            "Exhaustion, paranoia, stubborn defensiveness.",
+        ),
+        "ten": (
+            "Burden, overcommitment, heavy responsibility.",
+            "Releasing burdens, delegating, avoiding burnout.",
+        ),
+        "page": (
+            "Enthusiasm, exploration, free spirit, exciting news.",
+            "Hasty ideas, lack of direction, procrastination.",
+        ),
+        "knight": (
+            "Energy, passion, adventure, impulsive action.",
+            "Recklessness, haste, frustration, scattered drive.",
+        ),
+        "queen": (
+            "Confidence, warmth, determination, vibrant charisma.",
+            "Jealousy, insecurity, demanding behavior.",
+        ),
+        "king": (
+            "Visionary leadership, boldness, entrepreneurial spirit.",
+            "Impulsiveness, arrogance, unrealistic expectations.",
+        ),
+    },
+    "cups": {
+        "ace": (
+            "New love, emotional awakening, compassion, creativity.",
+            "Blocked emotions, emptiness, repressed feelings.",
+        ),
+        "two": (
+            "Partnership, mutual attraction, unity, deep connection.",
+            "Imbalance, broken communication, separation.",
+        ),
+        "three": (
+            "Friendship, celebration, community, shared joy.",
+            "Overindulgence, gossip, isolation from friends.",
+        ),
+        "four": (
+            "Apathy, contemplation, missed opportunities, withdrawal.",
+            "Renewed interest, seizing opportunity, acceptance.",
+        ),
+        "five": (
+            "Loss, grief, regret, focusing on what is gone.",
+            "Acceptance, moving on, finding peace after loss.",
+        ),
+        "six": (
+            "Nostalgia, childhood memories, innocence, reunion.",
+            "Living in the past, idealized memories, moving forward.",
+        ),
+        "seven": (
+            "Many choices, illusion, wishful thinking, fantasy.",
+            "Clarity, decisiveness, seeing through illusion.",
+        ),
+        "eight": (
+            "Walking away, disillusionment, seeking deeper meaning.",
+            "Fear of change, aimless drifting, staying too long.",
+        ),
+        "nine": (
+            "Contentment, satisfaction, wishes fulfilled.",
+            "Smugness, inner dissatisfaction, materialism.",
+        ),
+        "ten": (
+            "Harmony, family happiness, emotional fulfillment.",
+            "Broken harmony, misaligned values, disconnection at home.",
+        ),
+        "page": (
+            "Creative opportunity, intuitive message, curiosity.",
+            "Emotional immaturity, creative block, insecurity.",
+        ),
+        "knight": (
+            "Romance, charm, following the heart, idealism.",
+            "Moodiness, unrealistic expectations, jealousy.",
+        ),
+        "queen": (
+            "Compassion, emotional security, intuition, care.",
+            "Codependency, emotional insecurity, martyrdom.",
+        ),
+        "king": (
+            "Emotional balance, diplomacy, calm wisdom.",
+            "Emotional manipulation, volatility, coldness.",
+        ),
+    },
+    "swords": {
+        "ace": (
+            "Clarity, breakthrough, truth, sharp new ideas.",
+            "Confusion, miscommunication, clouded judgment.",
+        ),
+        "two": (
+            "Difficult decision, stalemate, avoidance, guarded emotions.",
+            "Indecision, information overload, the lesser of two evils.",
+        ),
+        "three": (
+            "Heartbreak, grief, painful truth, sorrow.",
+            "Healing, forgiveness, releasing pain.",
+        ),
+        "four": (
+            "Rest, recovery, contemplation, retreat.",
+            "Restlessness, burnout, forced return to action.",
+        ),
+        "five": (
+            "Conflict, hollow victory, winning at all costs.",
+            "Reconciliation, making amends, letting go of resentment.",
+        ),
+        "six": (
+            "Transition, moving on, leaving turmoil behind.",
+            "Resistance to change, unfinished business, feeling stuck.",
+        ),
+        "seven": (
+            "Deception, strategy, getting away with something.",
+            "Coming clean, troubled conscience, exposed schemes.",
+        ),
+        "eight": (
+            "Feeling trapped, self-imposed limits, victim mentality.",
+            "Self-acceptance, new perspective, release from restriction.",
+        ),
+        "nine": (
+            "Anxiety, worry, sleepless nights, fear.",
+            "Hope, reaching out for help, easing despair.",
+        ),
+        "ten": (
+            "Painful ending, rock bottom, betrayal, finality.",
+            "Recovery, regeneration, surviving the worst.",
+        ),
+        "page": (
+            "Curiosity, new ideas, vigilance, thirst for knowledge.",
+            "Gossip, hasty words, all talk and no action.",
+        ),
+        "knight": (
+            "Ambition, fast action, assertive drive.",
+            "Impulsiveness, aggression, burnout, lack of direction.",
+        ),
+        "queen": (
+            "Clear boundaries, independence, honest perception.",
+            "Coldness, bitterness, cruel honesty.",
+        ),
+        "king": (
+            "Intellectual authority, truth, clear thinking, ethics.",
+            "Manipulation, tyranny, abuse of power.",
+        ),
+    },
+    "pentacles": {
+        "ace": (
+            "New financial opportunity, prosperity, manifestation.",
+            "Lost opportunity, poor planning, scarcity mindset.",
+        ),
+        "two": (
+            "Balance, adaptability, juggling priorities.",
+            "Overcommitment, disorganization, financial strain.",
+        ),
+        "three": (
+            "Teamwork, collaboration, skill, building together.",
+            "Disharmony, poor teamwork, lack of effort.",
+        ),
+        "four": (
+            "Security, saving, control, holding on tightly.",
+            "Greed, materialism, learning to let go.",
+        ),
+        "five": (
+            "Hardship, financial loss, isolation, worry.",
+            "Recovery, spiritual comfort, the end of hardship.",
+        ),
+        "six": (
+            "Generosity, charity, giving and receiving, fairness.",
+            "Strings attached, debt, one-sided giving.",
+        ),
+        "seven": (
+            "Patience, long-term vision, assessment, investment.",
+            "Impatience, limited reward, wasted effort.",
+        ),
+        "eight": (
+            "Craftsmanship, diligence, skill development, mastery.",
+            "Perfectionism, lack of focus, uninspired work.",
+        ),
+        "nine": (
+            "Abundance, self-sufficiency, luxury, independence.",
+            "Overwork, financial setbacks, superficial success.",
+        ),
+        "ten": (
+            "Wealth, legacy, family, long-term security.",
+            "Financial failure, family disputes, loss of legacy.",
+        ),
+        "page": (
+            "Ambition, studiousness, new venture, manifestation.",
+            "Lack of progress, procrastination, missed lessons.",
+        ),
+        "knight": (
+            "Hard work, routine, reliability, steady progress.",
+            "Boredom, stagnation, laziness, perfectionism.",
+        ),
+        "queen": (
+            "Nurturing, practicality, abundance, groundedness.",
+            "Self-neglect, work-home imbalance, smothering.",
+        ),
+        "king": (
+            "Wealth, security, discipline, business acumen.",
+            "Greed, stubbornness, obsession with status.",
+        ),
+    },
+}
+
+MINOR_ARCANA = {
+    f"{rank} of {suit}": {"upright": upright, "reversed": reversed_}
+    for suit, ranks in MINOR_ARCANA_MEANINGS.items()
+    for rank, (upright, reversed_) in ranks.items()
+}
+
+TAROT_DECK = {**MAJOR_ARCANA, **MINOR_ARCANA}
 
 
-def generate_deck():
-    deck = dict(MAJOR_ARCANA)
-    for s in SUITS:
-        for r in RANKS:
-            deck[f"{r} of {s}"] = {
-                "upright": f"Abundant expression of {s.capitalize()} through the power of the {r.capitalize()}.",
-                "reversed": f"Internal blockages, inverted lessons, or friction regarding {s.capitalize()}.",
-            }
-    return deck
-
-
-TAROT_DECK = generate_deck()
-
-
-def draw_three_card_spread(
-    spread_type: str = "past_present_future", question: Optional[str] = None
-) -> Dict[str, Any]:
+def draw_three_card_spread(spread_type: str = "past_present_future") -> Dict[str, Any]:
     positions = ["Past Influences", "Current Situation", "Future Potential"]
     if spread_type == "situation_obstacle_advice":
         positions = ["Core Situation", "The Obstacle", "Guiding Advice"]
@@ -148,18 +358,33 @@ def draw_three_card_spread(
     return {"status": "success", "cards": cards}
 
 
+def find_card(card: str) -> Optional[str]:
+    """Resolve a card name to its deck key, or None if it is unknown or ambiguous."""
+    c = " ".join(card.lower().split())
+    if not c:
+        return None
+    for key in (c, f"the {c}"):
+        if key in TAROT_DECK:
+            return key
+    matches = [k for k in TAROT_DECK if c in k]
+    return matches[0] if len(matches) == 1 else None
+
+
 def get_tarot_meaning(card: str, orientation: str = "upright") -> Dict[str, Any]:
-    c = card.lower().strip()
-    data = TAROT_DECK.get(c)
-    if not data:
-        matched = next((k for k in TAROT_DECK if c in k), "the fool")
-        data = TAROT_DECK[matched]
-        c = matched
+    key = find_card(card)
+    if key is None:
+        return {
+            "status": "error",
+            "message": f"Unknown or ambiguous card name: '{card}'. "
+            "Use a full name such as 'The Tower' or 'Five of Cups'.",
+        }
+    if orientation not in ("upright", "reversed"):
+        orientation = "upright"
     return {
         "status": "success",
-        "card": c.title(),
+        "card": key.title(),
         "orientation": orientation,
-        "meaning": data.get(orientation, data["upright"]),
+        "meaning": TAROT_DECK[key][orientation],
     }
 
 
@@ -176,7 +401,6 @@ tarot_tools = [
                         "type": "string",
                         "enum": ["past_present_future", "situation_obstacle_advice"],
                     },
-                    "question": {"type": "string"},
                 },
                 "required": ["spread_type"],
             },

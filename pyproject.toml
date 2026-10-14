@@ -1,7 +1,7 @@
 [project]
 name = "tarot-space"
 version = "0.1.0"
-description = "Add your description here"
+description = "AI tarot reader: FastAPI + OpenAI function calling with a mobile-friendly web UI."
 readme = "README.md"
 authors = [
     { name = "ajaykotian", email = "ajaykotian7@gmail.com" }
@@ -14,9 +14,14 @@ dependencies = [
     "python-dotenv>=1.2.4",
 ]
 
-[project.scripts]
-tarot-space = "tarot_space:main"
+[tool.uv]
+package = false
 
-[build-system]
-requires = ["uv_build>=0.13.0,<0.14.0"]
-build-backend = "uv_build"
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
