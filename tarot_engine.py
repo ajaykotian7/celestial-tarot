@@ -338,24 +338,57 @@ MINOR_ARCANA = {
 TAROT_DECK = {**MAJOR_ARCANA, **MINOR_ARCANA}
 
 
-def draw_three_card_spread(spread_type: str = "past_present_future") -> Dict[str, Any]:
-    positions = ["Past Influences", "Current Situation", "Future Potential"]
-    if spread_type == "situation_obstacle_advice":
-        positions = ["Core Situation", "The Obstacle", "Guiding Advice"]
+# Position names for each spread, in the order the cards are laid down.
+SPREADS = {
+    "single_card": ["The Message"],
+    "past_present_future": ["Past Influences", "Current Situation", "Future Potential"],
+    "situation_obstacle_advice": ["Core Situation", "The Obstacle", "Guiding Advice"],
+    "celtic_cross": [
+        "The Present",
+        "The Challenge",
+        "The Foundation",
+        "The Recent Past",
+        "The Crown",
+        "The Near Future",
+        "Your Stance",
+        "Surrounding Influences",
+        "Hopes and Fears",
+        "The Outcome",
+    ],
+}
 
-    drawn_keys = random.sample(list(TAROT_DECK.keys()), 3)
+
+def card_display_name(key: str) -> str:
+    return key.title().replace(" Of ", " of ")
+
+
+def card_image_path(key: str) -> str:
+    """Public-domain Rider-Waite-Smith art, served from static/cards/."""
+    return f"/static/cards/{key.replace(' ', '-')}.webp"
+
+
+def draw_spread(spread_type: str = "past_present_future") -> Dict[str, Any]:
+    positions = SPREADS.get(spread_type)
+    if positions is None:
+        return {
+            "status": "error",
+            "message": f"Unknown spread_type '{spread_type}'. Use one of: {', '.join(SPREADS)}.",
+        }
+
+    drawn_keys = random.sample(list(TAROT_DECK.keys()), len(positions))
     cards = []
     for pos, key in zip(positions, drawn_keys):
         orientation = random.choice(["upright", "reversed"])
         cards.append(
             {
                 "position": pos,
-                "card": key.title(),
+                "card": card_display_name(key),
                 "orientation": orientation,
                 "meaning": TAROT_DECK[key][orientation],
+                "image": card_image_path(key),
             }
         )
-    return {"status": "success", "cards": cards}
+    return {"status": "success", "spread_type": spread_type, "cards": cards}
 
 
 def find_card(card: str) -> Optional[str]:
@@ -382,7 +415,7 @@ def get_tarot_meaning(card: str, orientation: str = "upright") -> Dict[str, Any]
         orientation = "upright"
     return {
         "status": "success",
-        "card": key.title(),
+        "card": card_display_name(key),
         "orientation": orientation,
         "meaning": TAROT_DECK[key][orientation],
     }
@@ -392,15 +425,19 @@ tarot_tools = [
     {
         "type": "function",
         "function": {
-            "name": "draw_three_card_spread",
-            "description": "Shuffles and draws 3 cards for any general reading, past/present/future inquiry, or situational advice.",
+            "name": "draw_spread",
+            "description": (
+                "Shuffles and draws cards for a reading, sized to the question. "
+                "single_card (1 card): simple or yes/no questions, daily guidance. "
+                "past_present_future (3): how a situation is unfolding over time. "
+                "situation_obstacle_advice (3): a problem, dilemma or decision. "
+                "celtic_cross (10): only for extremely deep or complex questions with many "
+                "intertwined factors, such as a major life crossroads."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "spread_type": {
-                        "type": "string",
-                        "enum": ["past_present_future", "situation_obstacle_advice"],
-                    },
+                    "spread_type": {"type": "string", "enum": list(SPREADS)},
                 },
                 "required": ["spread_type"],
             },

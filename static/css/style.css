@@ -1,0 +1,1111 @@
+:root {
+    --bg: #0b0c16;
+    --bg-top: #181b33;
+    --card-bg: #151828;
+    --accent: #d4af37;
+    --accent-glow: rgba(212, 175, 55, 0.35);
+    --candle: rgba(255, 170, 70, 0.16);
+    --mist: rgba(140, 130, 200, 0.10);
+    --text: #e6e8f2;
+    --text-muted: #9aa0b8;
+    --danger: #ff6b6b;
+    --card-ratio: 400 / 680;
+}
+
+/* After midnight the palette turns blood-red */
+body.witching {
+    --bg: #08040a;
+    --bg-top: #2a0d1a;
+    --accent: #d8a446;
+    --accent-glow: rgba(200, 40, 70, 0.4);
+    --candle: rgba(220, 50, 70, 0.16);
+    --mist: rgba(170, 40, 70, 0.12);
+}
+
+[hidden] {
+    display: none !important;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    background: radial-gradient(circle at top, var(--bg-top) 0%, var(--bg) 85%);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 14px;
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    overflow-x: hidden;
+    transition: background 1s ease;
+}
+
+body > .top-bar,
+body > header,
+body > main {
+    position: relative;
+    z-index: 1;
+}
+
+button {
+    font-family: inherit;
+}
+
+/* --- LIVING SKY --- */
+#sky-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.mist {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.mist-layer {
+    position: absolute;
+    width: 200%;
+    height: 60%;
+    left: -50%;
+    background:
+        radial-gradient(ellipse 30% 40% at 20% 50%, var(--mist), transparent 70%),
+        radial-gradient(ellipse 25% 35% at 55% 40%, var(--mist), transparent 70%),
+        radial-gradient(ellipse 35% 45% at 85% 60%, var(--mist), transparent 70%);
+    filter: blur(20px);
+}
+
+.mist-layer.m1 {
+    bottom: -10%;
+    animation: mistDrift 70s ease-in-out infinite alternate;
+}
+
+.mist-layer.m2 {
+    bottom: 15%;
+    opacity: 0.6;
+    animation: mistDrift 95s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes mistDrift {
+    from {
+        transform: translateX(-12%);
+    }
+
+    to {
+        transform: translateX(12%);
+    }
+}
+
+/* --- FULL SCREEN ACCESS BLOCKER --- */
+#blocker-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(circle at center, rgba(27, 30, 56, 0.88) 0%, rgba(6, 7, 13, 0.96) 90%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99999;
+    padding: 20px;
+    transition: opacity 0.4s ease, visibility 0.4s;
+}
+
+.gatekeeper-card {
+    background: rgba(21, 24, 40, 0.96);
+    border: 1px solid var(--accent);
+    border-radius: 18px;
+    padding: 32px 24px;
+    width: 100%;
+    max-width: 380px;
+    text-align: center;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.9), 0 0 20px var(--accent-glow);
+}
+
+.gatekeeper-icon {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+    display: inline-block;
+    animation: pulseGlow 2s infinite ease-in-out;
+}
+
+@keyframes pulseGlow {
+
+    0%,
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 5px var(--accent));
+    }
+
+    50% {
+        transform: scale(1.08);
+        filter: drop-shadow(0 0 14px var(--accent));
+    }
+}
+
+.gatekeeper-card h2 {
+    font-family: 'Cinzel', serif;
+    color: var(--accent);
+    font-size: clamp(1.3rem, 5vw, 1.6rem);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+}
+
+.gatekeeper-card p {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.pin-input-field {
+    width: 100%;
+    background: #0d0f1a;
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 10px;
+    padding: 14px;
+    color: #fff;
+    font-size: 16px;
+    /* Prevents auto-zoom on iOS */
+    letter-spacing: 6px;
+    text-align: center;
+    outline: none;
+    margin-bottom: 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.pin-input-field:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.btn-unlock {
+    width: 100%;
+    min-height: 48px;
+    background: linear-gradient(135deg, #d4af37, #aa8214);
+    border: none;
+    border-radius: 10px;
+    color: #0b0c16;
+    font-weight: 700;
+    padding: 12px;
+    cursor: pointer;
+    font-family: 'Cinzel', serif;
+    letter-spacing: 1.5px;
+    font-size: 0.95rem;
+    transition: transform 0.1s;
+}
+
+.btn-unlock:active {
+    transform: scale(0.97);
+}
+
+.error-msg {
+    color: var(--danger);
+    font-size: 0.85rem;
+    margin-top: 14px;
+    display: none;
+}
+
+/* --- TOP BAR --- */
+.top-bar {
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.moon-label {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.top-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.pill-btn {
+    background: rgba(21, 24, 40, 0.8);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    color: var(--accent);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+}
+
+.pill-btn[aria-pressed="false"] {
+    color: var(--text-muted);
+}
+
+/* Icons only on narrow phones */
+@media (max-width: 480px) {
+    .pill-label {
+        display: none;
+    }
+
+    .pill-btn {
+        padding: 6px 10px;
+    }
+}
+
+header {
+    text-align: center;
+    margin-bottom: 18px;
+}
+
+header h1 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1.6rem, 6vw, 2.3rem);
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-shadow: 0 0 15px var(--accent-glow);
+}
+
+header p {
+    color: var(--text-muted);
+    font-size: clamp(0.82rem, 3.2vw, 0.95rem);
+    margin-top: 6px;
+    padding: 0 8px;
+}
+
+#main-container {
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* --- CARD BACK ARTWORK (shared by shuffler, ritual piles and dealt cards) --- */
+.card-back-art {
+    background:
+        radial-gradient(circle at 50% 50%, rgba(212, 175, 55, 0.55) 0 7%, transparent 8%),
+        radial-gradient(circle at 50% 50%, transparent 0 17%, rgba(212, 175, 55, 0.4) 18% 19%, transparent 20%),
+        repeating-conic-gradient(from 0deg at 50% 50%, rgba(212, 175, 55, 0.14) 0deg 5deg, transparent 5deg 15deg),
+        radial-gradient(circle at 50% 50%, #3a2a66 0%, #120f24 75%);
+    border: 2px solid var(--accent);
+    border-radius: 10px;
+    box-shadow:
+        inset 0 0 0 4px #120f24,
+        inset 0 0 0 5px rgba(212, 175, 55, 0.6),
+        0 6px 20px rgba(0, 0, 0, 0.6);
+}
+
+/* --- DECK SHUFFLE ANIMATION --- */
+.animation-stage {
+    display: none;
+    height: 180px;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.deck-container {
+    position: relative;
+    width: 100px;
+    height: 155px;
+}
+
+.shuffle-card {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+.c1 {
+    animation: shuffleLeft 1.2s infinite ease-in-out;
+}
+
+.c2 {
+    animation: shuffleRight 1.2s infinite ease-in-out 0.2s;
+}
+
+.c3 {
+    animation: shuffleCenter 1.2s infinite ease-in-out 0.4s;
+}
+
+@keyframes shuffleLeft {
+
+    0%,
+    100% {
+        transform: translateX(0) rotate(0deg);
+        z-index: 1;
+    }
+
+    50% {
+        transform: translateX(-48px) rotate(-12deg) translateY(-6px);
+        z-index: 3;
+    }
+}
+
+@keyframes shuffleRight {
+
+    0%,
+    100% {
+        transform: translateX(0) rotate(0deg);
+        z-index: 1;
+    }
+
+    50% {
+        transform: translateX(48px) rotate(12deg) translateY(-6px);
+        z-index: 3;
+    }
+}
+
+@keyframes shuffleCenter {
+
+    0%,
+    100% {
+        transform: translateY(0) scale(1);
+        z-index: 2;
+    }
+
+    50% {
+        transform: translateY(-18px) scale(1.05);
+        z-index: 3;
+    }
+}
+
+@media (min-width: 600px) {
+    .deck-container {
+        width: 120px;
+        height: 180px;
+    }
+
+    @keyframes shuffleLeft {
+
+        0%,
+        100% {
+            transform: translateX(0) rotate(0deg);
+            z-index: 1;
+        }
+
+        50% {
+            transform: translateX(-70px) rotate(-14deg) translateY(-8px);
+            z-index: 3;
+        }
+    }
+
+    @keyframes shuffleRight {
+
+        0%,
+        100% {
+            transform: translateX(0) rotate(0deg);
+            z-index: 1;
+        }
+
+        50% {
+            transform: translateX(70px) rotate(14deg) translateY(-8px);
+            z-index: 3;
+        }
+    }
+}
+
+/* --- READING TABLE with candle glow --- */
+.table {
+    position: relative;
+}
+
+.table::before {
+    content: "";
+    position: absolute;
+    inset: -30px -10px;
+    background: radial-gradient(ellipse 55% 60% at 50% 50%, var(--candle), transparent 70%);
+    pointer-events: none;
+    z-index: -1;
+    animation: candleFlicker 3.7s infinite;
+}
+
+@keyframes candleFlicker {
+
+    0%,
+    100% {
+        opacity: 0.85;
+        transform: scale(1);
+    }
+
+    18% {
+        opacity: 0.65;
+    }
+
+    22% {
+        opacity: 0.95;
+        transform: scale(1.02);
+    }
+
+    47% {
+        opacity: 0.7;
+    }
+
+    52% {
+        opacity: 1;
+        transform: scale(0.99);
+    }
+
+    78% {
+        opacity: 0.75;
+    }
+}
+
+/* --- CARDS ON THE TABLE --- */
+.cards-tray {
+    --card-w: min(150px, 27vw);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.cards-tray:empty {
+    display: none;
+}
+
+.cards-tray.layout-single {
+    --card-w: min(200px, 48vw);
+}
+
+.tarot-card {
+    position: relative;
+    width: var(--card-w);
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    perspective: 900px;
+    animation: dealIn 0.5s ease backwards;
+    animation-delay: calc(var(--i) * 90ms);
+}
+
+.card-inner {
+    position: relative;
+    width: 100%;
+    aspect-ratio: var(--card-ratio);
+    transform-style: preserve-3d;
+    transition: transform 0.9s cubic-bezier(0.3, 0.1, 0.2, 1);
+}
+
+.tarot-card.is-flipped .card-inner {
+    transform: rotateY(180deg);
+}
+
+.card-face {
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    overflow: hidden;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.card-front {
+    transform: rotateY(180deg);
+    background: linear-gradient(160deg, #efe4c8, #cdb98c);
+    border: 2px solid var(--accent);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), 0 0 18px var(--accent-glow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-front img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Reversed cards are shown upside down, as a reader would see them */
+.tarot-card.reversed .card-front img {
+    transform: rotate(180deg);
+}
+
+.card-fallback {
+    font-family: 'Cinzel', serif;
+    color: #3a2a1a;
+    font-size: calc(var(--card-w) * 0.11);
+    text-align: center;
+    padding: 8px;
+}
+
+.card-caption {
+    margin-top: 8px;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.6s ease 0.5s;
+}
+
+.tarot-card.is-flipped .card-caption {
+    opacity: 1;
+}
+
+.card-pos {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+}
+
+.card-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(0.78rem, 3vw, 1rem);
+    line-height: 1.25;
+    margin-bottom: 2px;
+}
+
+.card-orient {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+@keyframes dealIn {
+    from {
+        opacity: 0;
+        transform: translateY(-40px) rotate(-4deg) scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* Celtic Cross: the cross on the left, the staff of four on the right */
+.cards-tray.layout-celtic {
+    --card-w: min(84px, 16vw);
+    display: grid;
+    grid-template-columns: repeat(3, var(--card-w)) calc(var(--card-w) * 0.35) var(--card-w);
+    grid-template-areas:
+        ".  c5 . . c10"
+        "c4 c1 c6 . c9"
+        ".  c3 . . c8"
+        ".  .  . . c7";
+    column-gap: calc(var(--card-w) * 0.3);
+    row-gap: 10px;
+    justify-content: center;
+    align-items: center;
+    justify-items: center;
+}
+
+.tarot-card.crossing {
+    z-index: 2;
+    transform: rotate(90deg) scale(0.82);
+    animation-name: dealInCrossing;
+}
+
+@keyframes dealInCrossing {
+    from {
+        opacity: 0;
+        transform: translateY(-40px) rotate(80deg) scale(0.75);
+    }
+
+    to {
+        opacity: 1;
+        transform: rotate(90deg) scale(0.82);
+    }
+}
+
+.card-number {
+    position: absolute;
+    top: -7px;
+    left: -7px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-size: 0.65rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+}
+
+.tarot-card.crossing .card-number {
+    transform: rotate(-90deg);
+}
+
+.spread-legend {
+    list-style: none;
+    margin: 14px auto 0;
+    max-width: 520px;
+    display: grid;
+    gap: 2px;
+}
+
+.spread-legend:empty {
+    display: none;
+}
+
+.legend-link {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 0.82rem;
+    padding: 5px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.legend-link:hover,
+.legend-link:focus-visible {
+    background: rgba(212, 175, 55, 0.08);
+}
+
+.legend-num {
+    color: var(--accent);
+    display: inline-block;
+    width: 1.8em;
+}
+
+.legend-link strong {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.legend-link em {
+    color: var(--text-muted);
+}
+
+/* --- TL;DR SUMMARY BLOCK --- */
+.tldr-box {
+    display: none;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(21, 24, 40, 0.95));
+    border: 1px solid var(--accent);
+    border-left: 4px solid var(--accent);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 18px var(--accent-glow);
+    animation: fadeUp 0.8s ease forwards;
+}
+
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.tldr-badge {
+    font-family: 'Cinzel', serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.tldr-text {
+    color: #ffffff;
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.12rem;
+    line-height: 1.5;
+}
+
+/* --- CHAT DISPLAY & INPUT --- */
+.chat-box {
+    background: rgba(21, 24, 40, 0.75);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 18px 16px;
+    min-height: 160px;
+    max-height: 48vh;
+    overflow-y: auto;
+    line-height: 1.6;
+    font-size: 0.95rem;
+    -webkit-overflow-scrolling: touch;
+}
+
+.narrative {
+    white-space: pre-line;
+    word-break: break-word;
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.12rem;
+    line-height: 1.6;
+    animation: fadeUp 1s ease;
+}
+
+.status-msg {
+    color: var(--accent);
+}
+
+.error-text {
+    color: var(--danger);
+}
+
+.input-bar {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    width: 100%;
+}
+
+input[type="text"] {
+    background: var(--card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: #fff;
+    font-size: 16px;
+    /* Prevents auto-zoom on mobile browsers */
+    outline: none;
+    flex: 1;
+    min-width: 0;
+    transition: border-color 0.2s;
+}
+
+input[type="text"]:focus {
+    border-color: var(--accent);
+}
+
+button.consult-btn {
+    background: linear-gradient(135deg, #d4af37, #aa8214);
+    border: none;
+    border-radius: 10px;
+    color: #0b0c16;
+    font-weight: 700;
+    padding: 0 18px;
+    min-height: 46px;
+    cursor: pointer;
+    font-family: 'Cinzel', serif;
+    letter-spacing: 1px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: transform 0.1s, opacity 0.2s;
+}
+
+button.consult-btn:active {
+    transform: scale(0.96);
+}
+
+.new-reading-btn {
+    align-self: center;
+    font-family: 'Cinzel', serif;
+    letter-spacing: 1px;
+    padding: 8px 18px;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* --- RITUAL --- */
+.ritual {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: radial-gradient(circle at center, rgba(20, 16, 40, 0.92), rgba(4, 4, 10, 0.97));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.ritual.visible {
+    opacity: 1;
+}
+
+.ritual-inner {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+}
+
+.ritual-question {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-style: italic;
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+}
+
+.ritual-stage {
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ritual-instruction {
+    font-family: 'Cinzel', serif;
+    color: var(--accent);
+    letter-spacing: 1.5px;
+    font-size: 1.05rem;
+    min-height: 1.5em;
+    text-shadow: 0 0 12px var(--accent-glow);
+}
+
+.ritual-skip {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 8px;
+}
+
+.breath-orb {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, rgba(255, 240, 200, 0.9), var(--accent) 45%, rgba(212, 175, 55, 0.1) 72%);
+    box-shadow: 0 0 40px var(--accent-glow), 0 0 90px var(--accent-glow);
+    transform: scale(0.7);
+    transition: transform 4s ease-in-out, box-shadow 4s ease-in-out;
+}
+
+.breath-orb.inhale {
+    transform: scale(1.6);
+    box-shadow: 0 0 70px var(--accent-glow), 0 0 140px var(--accent-glow);
+}
+
+.breath-orb.exhale {
+    transform: scale(0.7);
+}
+
+.cut-deck {
+    position: relative;
+    width: 300px;
+    height: 170px;
+}
+
+.pile {
+    position: absolute;
+    top: 0;
+    left: calc(50% - 50px);
+    width: 100px;
+    height: 170px;
+    cursor: pointer;
+    transition: transform 0.6s cubic-bezier(0.3, 0.1, 0.2, 1), opacity 0.5s, box-shadow 0.4s;
+}
+
+/* Stacked as one deck until cut */
+.pile:nth-child(1) {
+    transform: translate(-2px, 2px);
+}
+
+.pile:nth-child(3) {
+    transform: translate(2px, -2px);
+}
+
+.cut-deck.cut .pile:nth-child(1) {
+    transform: translateX(-105px) rotate(-6deg);
+}
+
+.cut-deck.cut .pile:nth-child(3) {
+    transform: translateX(105px) rotate(6deg);
+}
+
+.cut-deck.decided .pile:not(.chosen) {
+    opacity: 0.25;
+}
+
+.pile.chosen {
+    box-shadow:
+        inset 0 0 0 4px #120f24,
+        inset 0 0 0 5px rgba(212, 175, 55, 0.6),
+        0 0 30px var(--accent-glow),
+        0 0 60px var(--accent-glow);
+}
+
+@media (max-width: 380px) {
+    .cut-deck {
+        width: 260px;
+    }
+
+    .pile {
+        width: 80px;
+        height: 136px;
+        left: calc(50% - 40px);
+    }
+
+    .cut-deck.cut .pile:nth-child(1) {
+        transform: translateX(-88px) rotate(-6deg);
+    }
+
+    .cut-deck.cut .pile:nth-child(3) {
+        transform: translateX(88px) rotate(6deg);
+    }
+}
+
+/* --- ENLARGED CARD VIEW --- */
+.lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 1001;
+    background: rgba(4, 4, 10, 0.88);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeUp 0.3s ease;
+}
+
+.lightbox-card {
+    position: relative;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    max-width: 640px;
+    width: 100%;
+}
+
+.lightbox-card img {
+    width: min(260px, 45vw);
+    aspect-ratio: var(--card-ratio);
+    object-fit: cover;
+    border-radius: 12px;
+    border: 2px solid var(--accent);
+    box-shadow: 0 0 40px var(--accent-glow);
+    flex-shrink: 0;
+}
+
+.lightbox-card img.reversed {
+    transform: rotate(180deg);
+}
+
+.lightbox-card h3 {
+    font-family: 'Cinzel', serif;
+    color: var(--accent);
+    font-size: 1.4rem;
+    margin: 4px 0;
+}
+
+.lightbox-card p {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.15rem;
+    line-height: 1.5;
+    margin-top: 10px;
+}
+
+.lightbox-close {
+    position: absolute;
+    top: -12px;
+    right: -4px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.3rem;
+    cursor: pointer;
+    padding: 8px;
+}
+
+@media (max-width: 540px) {
+    .lightbox-card {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .lightbox-card img {
+        width: min(220px, 60vw);
+    }
+}
+
+/* --- REDUCED MOTION: no drifting, flipping or pulsing; cards fade instead --- */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        animation-delay: 0ms !important;
+    }
+
+    .mist-layer,
+    .table::before,
+    .shuffle-card,
+    .gatekeeper-icon {
+        animation: none !important;
+    }
+
+    .card-inner,
+    .tarot-card.is-flipped .card-inner {
+        transform: none;
+        transition: none;
+    }
+
+    .card-front {
+        transform: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .card-face.card-back {
+        transition: opacity 0.3s ease;
+    }
+
+    .tarot-card.is-flipped .card-front {
+        opacity: 1;
+    }
+
+    .tarot-card.is-flipped .card-back {
+        opacity: 0;
+    }
+
+    .breath-orb,
+    .breath-orb.inhale,
+    .breath-orb.exhale {
+        transform: none;
+        transition: box-shadow 4s ease-in-out;
+    }
+
+    .pile,
+    .cut-deck.cut .pile:nth-child(n) {
+        transition: opacity 0.3s;
+    }
+}

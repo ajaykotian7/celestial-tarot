@@ -59,10 +59,10 @@ def http():
     return TestClient(app)
 
 
-def chat(http, message="What lies ahead?", history=None, pin=PIN, headers=None):
+def chat(http, message="What lies ahead?", history=None, pin=PIN, headers=None, **body):
     return http.post(
         "/api/chat",
-        json={"message": message, "history": history or []},
+        json={"message": message, "history": history or [], **body},
         headers={"x-app-pin": pin, **(headers or {})},
     )
 
@@ -174,7 +174,12 @@ def test_chat_plain_reply_with_tldr(http, monkeypatch):
     res = chat(http, history=history)
 
     assert res.status_code == 200
-    assert res.json() == {"reply": "The path is open.", "cards": [], "tldr": "Go for it."}
+    assert res.json() == {
+        "reply": "The path is open.",
+        "cards": [],
+        "spread": None,
+        "tldr": "Go for it.",
+    }
     sent = completions.calls[0]["messages"]
     # system prompt + last 6 history messages + the new question
     assert len(sent) == 1 + app_module.HISTORY_MESSAGES_SENT_TO_MODEL + 1
@@ -184,7 +189,7 @@ def test_chat_plain_reply_with_tldr(http, monkeypatch):
 def test_chat_draws_cards_via_tool_call(http, monkeypatch):
     first = completion(
         tool_calls=[
-            tool_call("call_1", "draw_three_card_spread", '{"spread_type": "past_present_future"}')
+            tool_call("call_1", "draw_spread", '{"spread_type": "past_present_future"}')
         ]
     )
     completions = fake_openai(monkeypatch, first, completion("Your reading.<tldr>Summary.</tldr>"))
@@ -233,3 +238,78 @@ def test_chat_hides_internal_errors(http, monkeypatch):
     res = chat(http)
     assert res.status_code == 500
     assert "secret" not in res.json()["detail"]
+
+
+# --- spreads, moon and witching hour ---
+
+
+def draw_call(spread_type="past_present_future", call_id="call_1"):
+    return completion(
+        tool_calls=[tool_call(call_id, "draw_spread", json.dumps({"spread_type": spread_type}))]
+    )
+
+
+@pytest.mark.parametrize(
+    "spread_type, count",
+    [("single_card", 1), ("past_present_future", 3), ("situation_obstacle_advice", 3), ("celtic_cross", 10)],
+)
+def test_new_reading_forces_a_draw_sized_by_the_model(http, monkeypatch, spread_type, count):
+    completions = fake_openai(monkeypatch, draw_call(spread_type), completion("Reading."))
+
+    body = chat(http, new_reading=True).json()
+
+    first, second = completions.calls
+    assert first["tool_choice"] == {"type": "function", "function": {"name": "draw_spread"}}
+    assert app_module.NEW_READING_PROMPT in first["messages"][0]["content"]
+    assert body["spread"] == spread_type
+    assert len(body["cards"]) == count
+    assert body["cards"][0]["image"].startswith("/static/cards/")
+    expected_tokens = (
+        app_module.CELTIC_CROSS_COMPLETION_TOKENS
+        if spread_type == "celtic_cross"
+        else app_module.MAX_COMPLETION_TOKENS
+    )
+    assert second["max_tokens"] == expected_tokens
+
+
+def test_follow_up_lets_the_model_answer_without_drawing(http, monkeypatch):
+    completions = fake_openai(monkeypatch, completion("The Tower speaks of upheaval."))
+
+    body = chat(http, message="What does the second card mean?").json()
+
+    first = completions.calls[0]
+    assert first["tool_choice"] == "auto"
+    assert app_module.FOLLOW_UP_PROMPT in first["messages"][0]["content"]
+    assert body["cards"] == [] and body["spread"] is None
+
+
+def test_rejects_non_boolean_new_reading(http, monkeypatch):
+    fake_openai(monkeypatch, completion("hi"))
+    assert chat(http, new_reading="sometimes").status_code == 422
+
+
+def test_system_prompt_mentions_moon_phase(http, monkeypatch):
+    completions = fake_openai(monkeypatch, completion("ok"))
+    chat(http)
+    moon = app_module.moon_phase()["name"]
+    assert moon in completions.calls[0]["messages"][0]["content"]
+
+
+@pytest.mark.parametrize("hour, witching", [(0, True), (3, True), (4, False), (23, False), (None, False)])
+def test_witching_hour_changes_the_tone(http, monkeypatch, hour, witching):
+    completions = fake_openai(monkeypatch, completion("ok"))
+    chat(http, local_hour=hour)
+    system = completions.calls[0]["messages"][0]["content"]
+    assert (app_module.WITCHING_HOUR_PROMPT in system) is witching
+
+
+@pytest.mark.parametrize("hour", [-1, 24, "midnight"])
+def test_rejects_invalid_local_hour(http, monkeypatch, hour):
+    fake_openai(monkeypatch, completion("ok"))
+    assert chat(http, local_hour=hour).status_code == 422
+
+
+def test_sky_endpoint(http):
+    moon = http.get("/api/sky").json()["moon"]
+    assert set(moon) == {"name", "emoji", "fraction"}
+    assert 0 <= moon["fraction"] < 1

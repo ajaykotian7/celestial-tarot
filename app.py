@@ -12,7 +12,8 @@ from fastapi.staticfiles import StaticFiles
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
-from tarot_engine import draw_three_card_spread, get_tarot_meaning, tarot_tools
+from celestial import is_witching_hour, moon_phase
+from tarot_engine import draw_spread, get_tarot_meaning, tarot_tools
 
 load_dotenv()
 
@@ -29,7 +30,7 @@ api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("MY_OPEN_AI_KEY")
 client = AsyncOpenAI(api_key=api_key) if api_key else None
 
 AVAILABLE_FUNCTIONS = {
-    "draw_three_card_spread": draw_three_card_spread,
+    "draw_spread": draw_spread,
     "get_tarot_meaning": get_tarot_meaning,
 }
 
@@ -57,6 +58,8 @@ HISTORY_MESSAGES_SENT_TO_MODEL = 6
 
 MODEL = "gpt-4o"
 MAX_COMPLETION_TOKENS = 700
+# A 10-card Celtic Cross needs more room to cover every position
+CELTIC_CROSS_COMPLETION_TOKENS = 1200
 
 SYSTEM_PROMPT = (
     "You are an intuitive, grounded Tarot AI reader. "
@@ -69,6 +72,26 @@ SYSTEM_PROMPT = (
 
 EMPTY_REPLY_FALLBACK = "The cards are quiet right now. Please ask your question again."
 
+NEW_READING_PROMPT = (
+    "This is a new question, so draw cards with draw_spread before answering. "
+    "Size the spread to the question: single_card for a simple or yes/no question, "
+    "a three-card spread for a question with some complexity (past_present_future for "
+    "how something is unfolding, situation_obstacle_advice for a problem or decision), "
+    "and celtic_cross only for an extremely deep or complex question with many "
+    "intertwined factors. Interpret every position."
+)
+
+FOLLOW_UP_PROMPT = (
+    "The querent is asking a follow-up about cards already drawn in this conversation. "
+    "Answer from those cards. Only draw again if they explicitly ask for a new reading."
+)
+
+WITCHING_HOUR_PROMPT = (
+    "It is the witching hour where the querent is (after midnight). Let your voice grow "
+    "darker, more ominous and uncanny, while staying kind: never frighten them about "
+    "real-world harm."
+)
+
 
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant"]
@@ -78,6 +101,11 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=MAX_MESSAGE_CHARS)
     history: List[ChatMessage] = Field(default=[], max_length=MAX_HISTORY_MESSAGES)
+    # True for a fresh question: cards must be drawn, in a spread the model sizes
+    # to the question. False for follow-ups about cards already on the table.
+    new_reading: bool = False
+    # The querent's local hour, used for the witching-hour tone
+    local_hour: Optional[int] = Field(default=None, ge=0, le=23)
 
 
 def get_client_ip(request: Request) -> str:
@@ -144,6 +172,19 @@ def split_tldr(raw_reply: Optional[str]) -> Tuple[str, Optional[str]]:
     return reply, tldr.strip() or None
 
 
+def build_system_prompt(new_reading: bool, local_hour: Optional[int]) -> str:
+    moon = moon_phase()
+    parts = [
+        SYSTEM_PROMPT,
+        f"The reading takes place under a {moon['name']}. "
+        "Weave its symbolism in briefly where it fits.",
+    ]
+    parts.append(NEW_READING_PROMPT if new_reading else FOLLOW_UP_PROMPT)
+    if is_witching_hour(local_hour):
+        parts.append(WITCHING_HOUR_PROMPT)
+    return "\n\n".join(parts)
+
+
 @app.get("/")
 def serve_index():
     return FileResponse("static/index.html")
@@ -167,6 +208,12 @@ async def verify_pin(request: Request, x_app_pin: Optional[str] = Header(None)):
         return {"status": "unlocked", "pin_required": True}
 
     raise HTTPException(status_code=401, detail="Invalid sanctuary PIN.")
+
+
+@app.get("/api/sky")
+def sky():
+    """Current moon phase, shown in the UI before any reading."""
+    return {"moon": moon_phase()}
 
 
 @app.post("/api/chat")
@@ -194,7 +241,8 @@ async def chat_endpoint(
 
     # 3. Agent Execution
     try:
-        messages: List[Any] = [{"role": "system", "content": SYSTEM_PROMPT}]
+        system_prompt = build_system_prompt(payload.new_reading, payload.local_hour)
+        messages: List[Any] = [{"role": "system", "content": system_prompt}]
 
         for h in payload.history[-HISTORY_MESSAGES_SENT_TO_MODEL:]:
             messages.append({"role": h.role, "content": h.content})
@@ -205,20 +253,27 @@ async def chat_endpoint(
             model=MODEL,
             messages=messages,
             tools=tarot_tools,
-            tool_choice="auto",
+            # A new question must draw cards; for follow-ups the model decides
+            tool_choice=(
+                {"type": "function", "function": {"name": "draw_spread"}}
+                if payload.new_reading
+                else "auto"
+            ),
             max_tokens=MAX_COMPLETION_TOKENS,
         )
 
         resp_msg = response.choices[0].message
         drawn_cards_data = []
+        drawn_spread = None
 
         if resp_msg.tool_calls:
             messages.append(resp_msg)
             for tool_call in resp_msg.tool_calls:
                 fn_name = tool_call.function.name
                 tool_res = run_tool(fn_name, tool_call.function.arguments)
-                if fn_name == "draw_three_card_spread" and "cards" in tool_res:
+                if fn_name == "draw_spread" and "cards" in tool_res:
                     drawn_cards_data = tool_res["cards"]
+                    drawn_spread = tool_res["spread_type"]
 
                 messages.append(
                     {
@@ -229,7 +284,13 @@ async def chat_endpoint(
                 )
 
             final_resp = await client.chat.completions.create(
-                model=MODEL, messages=messages, max_tokens=MAX_COMPLETION_TOKENS
+                model=MODEL,
+                messages=messages,
+                max_tokens=(
+                    CELTIC_CROSS_COMPLETION_TOKENS
+                    if drawn_spread == "celtic_cross"
+                    else MAX_COMPLETION_TOKENS
+                ),
             )
             raw_reply = final_resp.choices[0].message.content
         else:
@@ -240,6 +301,7 @@ async def chat_endpoint(
         return {
             "reply": assistant_reply,
             "cards": drawn_cards_data,
+            "spread": drawn_spread,
             "tldr": tldr_summary,
         }
 
