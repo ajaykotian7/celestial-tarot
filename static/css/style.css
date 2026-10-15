@@ -1848,3 +1848,204 @@ button:disabled {
         padding: 1px 4px;
     }
 }
+
+/* --- GUIDED TOUR (coachmarks) --- */
+.tour {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.tour.visible {
+    opacity: 1;
+}
+
+.tour.leaving {
+    opacity: 0;
+}
+
+/* The huge shadow dims everything except the spotlit control */
+.tour-spotlight {
+    position: fixed;
+    border-radius: 14px;
+    box-shadow:
+        0 0 0 9999px rgba(4, 4, 10, 0.8),
+        0 0 0 2px var(--accent),
+        0 0 26px 4px var(--accent-glow);
+    pointer-events: none;
+    transition: left 0.35s ease, top 0.35s ease, width 0.35s ease, height 0.35s ease;
+}
+
+.tour-bubble {
+    position: fixed;
+    width: min(330px, calc(100vw - 24px));
+    background: rgba(21, 24, 40, 0.98);
+    border: 1px solid var(--accent);
+    border-radius: 14px;
+    padding: 14px 16px 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), 0 0 20px var(--accent-glow);
+    transition: left 0.35s ease, top 0.35s ease;
+}
+
+.tour-bubble.centered {
+    width: min(360px, calc(100vw - 32px));
+    text-align: center;
+}
+
+/* Arrow pointing at the spotlit control */
+.tour-bubble.below::before,
+.tour-bubble.above::before {
+    content: "";
+    position: absolute;
+    left: calc(var(--arrow-x) - 7px);
+    width: 12px;
+    height: 12px;
+    background: rgba(21, 24, 40, 0.98);
+    border: 1px solid var(--accent);
+    transform: rotate(45deg);
+}
+
+.tour-bubble.below::before {
+    top: -7px;
+    border-right: none;
+    border-bottom: none;
+}
+
+.tour-bubble.above::before {
+    bottom: -7px;
+    border-left: none;
+    border-top: none;
+}
+
+.tour-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.tour-bubble.centered .tour-head {
+    justify-content: center;
+    gap: 14px;
+}
+
+.tour-count {
+    font-size: 0.68rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.tour-skip {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.tour-title {
+    font-family: 'Cinzel', serif;
+    color: var(--accent);
+    font-size: 1.05rem;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+}
+
+.tour-text {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--text);
+}
+
+.tour-extra {
+    margin-top: 12px;
+    width: 100%;
+    background: rgba(212, 175, 55, 0.1);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    color: var(--accent);
+    padding: 9px 12px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.tour-extra:disabled {
+    opacity: 0.8;
+    cursor: default;
+}
+
+.tour-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.tour-bubble.centered .tour-actions {
+    justify-content: center;
+}
+
+.tour-next {
+    background: linear-gradient(135deg, #d4af37, #aa8214);
+    border: none;
+    border-radius: 10px;
+    color: #0b0c16;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    font-size: 0.82rem;
+    padding: 9px 18px;
+    cursor: pointer;
+}
+
+.tour-secondary {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 10px;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    padding: 8px 14px;
+    cursor: pointer;
+}
+
+.footer-link {
+    align-self: center;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    padding: 10px;
+    margin-top: 6px;
+}
+
+.footer-link:hover,
+.footer-link:focus-visible {
+    color: var(--accent);
+}
+
+@media (pointer: coarse) {
+
+    .tour-next,
+    .tour-secondary,
+    .tour-extra,
+    .tour-skip {
+        min-height: 44px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .tour,
+    .tour-spotlight,
+    .tour-bubble {
+        transition: none;
+    }
+}

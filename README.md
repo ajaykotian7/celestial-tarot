@@ -41,6 +41,10 @@ Deployed live on **Render**.
 - City search for the birth place goes straight from your browser to [Open-Meteo](https://open-meteo.com/).
 - **Forget me** in the profile panel erases the profile and journal from the device.
 
+### Getting around
+
+- **Guided tour:** After unlocking for the first time, a short tour spotlights each control (the question box, tonight's sky, the ritual, sound, the card of the day, the journal and your profile), with a one-tap "Turn sound on" along the way. It ends by inviting you to share your birth date. **✦ How this works** at the bottom of the page replays it.
+
 ### Atmosphere
 
 - **3D card reveal:** Cards are dealt face-down and flip over one at a time. Reversed cards appear upside down, as a reader would see them. Tap any card to see it enlarged with its meaning.
@@ -83,6 +87,7 @@ tarot-space/
 │   │   ├── main.js         # App flow: PIN, readings vs follow-ups, toggles
 │   │   ├── profile.js      # Profile panel, place search, derived insights
 │   │   ├── journal.js      # Reading journal and the summary sent to the oracle
+│   │   ├── tour.js         # First-run guided tour (coachmarks)
 │   │   ├── cards.js        # Dealing, flipping and enlarging cards
 │   │   ├── ritual.js       # Breathe / cut / choose-a-pile ritual
 │   │   ├── sky.js          # Canvas stars, dust, shooting stars and moon

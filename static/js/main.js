@@ -1,10 +1,11 @@
-import { el, storage, buzz } from "./util.js";
+import { el, storage, buzz, sleep } from "./util.js";
 import * as sound from "./sound.js";
 import { startSky } from "./sky.js";
 import { revealSpread, clearSpread, openLightbox, closeLightbox } from "./cards.js";
 import { runRitual } from "./ritual.js";
 import * as profile from "./profile.js";
 import * as journal from "./journal.js";
+import { runTour } from "./tour.js";
 
 // The server only sends the last 6 messages to the model, so don't send more
 const MAX_HISTORY_MESSAGES = 6;
@@ -15,6 +16,8 @@ const INTRO_TEXT =
     'Ask your question, such as: "What energy surrounds my next career move?" ' +
     "The oracle will choose how many cards to draw.";
 
+const TOUR_KEY = "tarot_tour_seen";
+
 const history = [];
 // While cards are on the table, questions are follow-ups about them (no new draw)
 let cardsOnTable = false;
@@ -22,6 +25,7 @@ let ritualEnabled = storage.get("tarot_ritual") !== "off";
 // Derived from the profile by the server: signs, birth card, numbers
 let insights = null;
 let dailyCard = null;
+let insightsReady = Promise.resolve();
 
 const $ = (id) => document.getElementById(id);
 const sky = startSky($("sky-canvas"));
@@ -79,12 +83,114 @@ function unlockUI() {
         blocker.style.visibility = "hidden";
         blocker.style.display = "none";
         $("user-input").focus();
-        // First visit: invite the querent to share a little about themselves
-        if (profile.shouldPrompt()) {
-            profile.openPanel(insights);
-            profile.markPrompted();
-        }
+        welcome();
     }, 400);
+}
+
+// --- FIRST-RUN GUIDE ---
+
+function tourSteps() {
+    const hasProfile = !!profile.load();
+    return [
+        {
+            target: null,
+            title: "Welcome to the sanctuary",
+            text: "A quick look around before your first reading. It takes half a minute.",
+        },
+        {
+            target: ".input-bar",
+            title: "Ask your question",
+            text:
+                "Ask anything on your mind. The oracle decides how many cards it deserves: one for a " +
+                "simple question, three for most, the ten-card Celtic Cross for the deepest. Then ask " +
+                "follow-ups about the same cards, or start a ✦ New reading.",
+        },
+        {
+            target: "#moon-label",
+            title: "Tonight's sky",
+            text:
+                "The real moon phase and astrological season colour every reading. ☿ ℞ appears when " +
+                "Mercury is retrograde. After midnight, the witching hour turns the sanctuary red.",
+        },
+        {
+            target: "#ritual-toggle",
+            title: "✦ The ritual",
+            text:
+                "Before a reading you'll hold your question, breathe, and cut the deck. Tap here to " +
+                "turn the ritual off and go straight to the cards.",
+        },
+        {
+            target: "#sound-toggle",
+            title: "Sound",
+            text:
+                "Sound starts off. Turn it on for a low ambient drone and the sounds of shuffling " +
+                "and turning cards. Tap here any time to switch it.",
+            extra: sound.isEnabled()
+                ? undefined
+                : {
+                      label: "🔊 Turn sound on",
+                      doneLabel: "🔊 Sound is on",
+                      onClick: () => {
+                          sound.setEnabled(true);
+                          renderToggles();
+                      },
+                  },
+        },
+        {
+            target: "#daily-card-btn",
+            title: "Your card for today",
+            text: "A card drawn just for you. It stays the same all day and changes at midnight.",
+        },
+        {
+            target: "#journal-btn",
+            title: "📖 Your journal",
+            text:
+                "Every reading is kept here, only on this device. The oracle remembers your last " +
+                "few and notices the cards that keep returning.",
+        },
+        hasProfile
+            ? {
+                  target: "#profile-btn",
+                  title: "☉ You",
+                  text:
+                      "Your signs, birth card and numbers live here, and you can edit them any time. " +
+                      "When one of your cards appears in a reading, it glows.",
+              }
+            : {
+                  target: "#profile-btn",
+                  title: "☉ Let the cards know you",
+                  text:
+                      "Share your birth date and the oracle will know your signs and birth card. When " +
+                      "one of your cards appears in a reading, it glows. It's optional and stays on " +
+                      "this device.",
+                  finish: [
+                      { label: "Tell the cards about me", action: "profile", primary: true },
+                      { label: "Maybe later", action: "done" },
+                  ],
+              },
+    ];
+}
+
+async function startTour() {
+    const result = await runTour(tourSteps());
+    storage.set(TOUR_KEY, "1");
+    // The tour ends with the profile invitation, so don't pop the profile up separately
+    profile.markPrompted();
+    if (result === "profile") profile.openPanel(insights);
+    else $("user-input").focus();
+}
+
+// After unlocking: the guide once (including for people who unlocked before it existed),
+// otherwise the one-time profile invitation
+async function welcome() {
+    if (storage.get(TOUR_KEY) !== "1") {
+        // Give the card of the day a moment to load, so its step can be shown
+        await Promise.race([insightsReady, sleep(1500)]);
+        startTour();
+    } else if (profile.shouldPrompt()) {
+        profile.openPanel(insights);
+        profile.markPrompted();
+    }
 }
 
 function relockSanctuary() {
@@ -331,6 +437,7 @@ document.addEventListener("keydown", (e) => {
 
 $("profile-btn").addEventListener("click", () => profile.openPanel(insights));
 $("journal-btn").addEventListener("click", journal.openPanel);
+$("tour-btn").addEventListener("click", startTour);
 $("daily-card-btn").addEventListener("click", () => dailyCard && openLightbox(dailyCard));
 
 profile.initPanel({
@@ -361,7 +468,7 @@ renderToggles();
 startNewReading();
 applyWitchingHour();
 loadSky();
-loadInsights();
+insightsReady = loadInsights();
 
 (async () => {
     const storedPin = storage.get("tarot_pin");
