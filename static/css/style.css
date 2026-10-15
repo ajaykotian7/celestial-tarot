@@ -62,11 +62,11 @@ button {
 }
 
 /* --- LIVING SKY --- */
+/* Width and height are set from JS to match the drawing size */
 #sky-canvas {
     position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100vh;
+    top: 0;
+    left: 0;
     z-index: 0;
     pointer-events: none;
 }
@@ -115,20 +115,20 @@ button {
 /* --- FULL SCREEN ACCESS BLOCKER --- */
 #blocker-screen {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    inset: 0;
     background: radial-gradient(circle at center, rgba(27, 30, 56, 0.88) 0%, rgba(6, 7, 13, 0.96) 90%);
     display: flex;
     justify-content: center;
-    align-items: center;
     z-index: 99999;
-    padding: 20px;
+    padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
     transition: opacity 0.4s ease, visibility 0.4s;
 }
 
 .gatekeeper-card {
+    /* margin: auto centres it, yet lets the screen scroll when it doesn't fit */
+    margin: auto 0;
     background: rgba(21, 24, 40, 0.96);
     border: 1px solid var(--accent);
     border-radius: 18px;
@@ -842,9 +842,10 @@ button:disabled {
     z-index: 1000;
     background: radial-gradient(circle at center, rgba(20, 16, 40, 0.92), rgba(4, 4, 10, 0.97));
     display: flex;
-    align-items: center;
     justify-content: center;
-    padding: 24px;
+    padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
     opacity: 0;
     transition: opacity 0.4s ease;
 }
@@ -854,6 +855,7 @@ button:disabled {
 }
 
 .ritual-inner {
+    margin: auto 0;
     width: 100%;
     max-width: 420px;
     text-align: center;
@@ -989,14 +991,16 @@ button:disabled {
     background: rgba(4, 4, 10, 0.88);
     backdrop-filter: blur(4px);
     display: flex;
-    align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
     animation: fadeUp 0.3s ease;
 }
 
 .lightbox-card {
     position: relative;
+    margin: auto 0;
     display: flex;
     gap: 20px;
     align-items: center;
@@ -1107,5 +1111,740 @@ button:disabled {
     .pile,
     .cut-deck.cut .pile:nth-child(n) {
         transition: opacity 0.3s;
+    }
+}
+
+/* --- PERSONAL TOUCHES --- */
+.retrograde-badge {
+    color: var(--accent);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 999px;
+    padding: 1px 7px;
+    font-size: 0.72rem;
+    cursor: help;
+}
+
+.daily-card-btn {
+    margin-top: 12px;
+    background: none;
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.78rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: box-shadow 0.3s;
+}
+
+.daily-card-btn:hover,
+.daily-card-btn:focus-visible {
+    box-shadow: 0 0 14px var(--accent-glow);
+}
+
+/* A card that is the querent's birth card or sign card */
+.tarot-card.personal.is-flipped .card-front {
+    box-shadow:
+        0 0 0 2px #fff4cf,
+        0 0 22px 6px rgba(255, 215, 120, 0.75),
+        0 0 60px 12px var(--accent-glow);
+    animation: personalAura 2.4s ease-in-out 0.9s infinite alternate;
+}
+
+@keyframes personalAura {
+    from {
+        box-shadow:
+            0 0 0 2px #fff4cf,
+            0 0 16px 4px rgba(255, 215, 120, 0.55),
+            0 0 40px 8px var(--accent-glow);
+    }
+
+    to {
+        box-shadow:
+            0 0 0 2px #fff4cf,
+            0 0 30px 9px rgba(255, 215, 120, 0.9),
+            0 0 80px 18px var(--accent-glow);
+    }
+}
+
+.card-personal {
+    color: #ffe7a3;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-top: 4px;
+    text-shadow: 0 0 8px var(--accent-glow);
+}
+
+.legend-personal {
+    color: #ffe7a3;
+    font-size: 0.75rem;
+}
+
+/* --- PANELS: profile and journal --- */
+.panel-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(4, 4, 10, 0.86);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: max(20px, env(safe-area-inset-top)) 14px 20px;
+    overflow-y: auto;
+    animation: fadeUp 0.3s ease;
+}
+
+.panel {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    margin: auto 0;
+    background: rgba(21, 24, 40, 0.97);
+    border: 1px solid var(--accent);
+    border-radius: 18px;
+    padding: 26px 22px 22px;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), 0 0 20px var(--accent-glow);
+}
+
+.panel h2 {
+    font-family: 'Cinzel', serif;
+    color: var(--accent);
+    font-size: 1.3rem;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+    padding-right: 28px;
+}
+
+.panel-sub {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    margin-bottom: 18px;
+}
+
+.panel-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 6px;
+}
+
+.profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: var(--text);
+    flex: 1;
+    min-width: 0;
+}
+
+.field em,
+.hint {
+    color: var(--text-muted);
+    font-style: normal;
+    font-size: 0.75rem;
+}
+
+.field-row {
+    display: flex;
+    gap: 12px;
+}
+
+@media (max-width: 420px) {
+    .field-row {
+        flex-direction: column;
+    }
+}
+
+.field input,
+.place-chosen {
+    background: #0d0f1a;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: #fff;
+    font-size: 16px;
+    outline: none;
+    font-family: inherit;
+    color-scheme: dark;
+    width: 100%;
+}
+
+.field input:focus {
+    border-color: var(--accent);
+}
+
+.place-results {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.place-results:empty {
+    display: none;
+}
+
+.place-option {
+    width: 100%;
+    text-align: left;
+    background: rgba(212, 175, 55, 0.06);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.place-option:hover,
+.place-option:focus-visible {
+    border-color: var(--accent);
+}
+
+.place-chosen {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.88rem;
+}
+
+.place-chosen button {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 2px 6px;
+}
+
+.insights {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(21, 24, 40, 0.6));
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.insights-title {
+    font-family: 'Cinzel', serif;
+    color: var(--accent);
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.panel-actions .btn-unlock {
+    width: auto;
+    flex: 1;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 8px;
+}
+
+.btn-link.danger {
+    color: var(--danger);
+    align-self: center;
+    font-size: 0.78rem;
+}
+
+/* --- JOURNAL --- */
+.chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.chip {
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 0.78rem;
+    color: var(--accent);
+}
+
+.journal-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.journal-entry {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: rgba(11, 12, 22, 0.6);
+}
+
+.journal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.journal-date {
+    color: var(--accent);
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.journal-delete {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 6px;
+}
+
+.journal-question {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-style: italic;
+    font-size: 1.05rem;
+    margin: 4px 0 8px;
+    overflow-wrap: anywhere;
+}
+
+.journal-thumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.journal-thumb {
+    width: 38px;
+    padding: 0;
+    background: none;
+    border: 1px solid rgba(212, 175, 55, 0.5);
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.journal-thumb.personal {
+    box-shadow: 0 0 10px 2px rgba(255, 215, 120, 0.7);
+}
+
+.journal-thumb img {
+    display: block;
+    width: 100%;
+    aspect-ratio: var(--card-ratio);
+    object-fit: cover;
+}
+
+.journal-thumb img.reversed {
+    transform: rotate(180deg);
+}
+
+.journal-tldr {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin-top: 8px;
+}
+
+/* --- PROFILE PORTRAIT: what the cards know --- */
+.portrait {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+#portrait-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.portrait-head {
+    text-align: center;
+    padding: 4px 28px 0;
+}
+
+.portrait-eyebrow {
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.panel .portrait-name {
+    font-size: clamp(1.7rem, 7vw, 2.2rem);
+    letter-spacing: 2px;
+    margin: 6px 0 4px;
+    padding: 0;
+    text-shadow: 0 0 18px var(--accent-glow);
+    overflow-wrap: anywhere;
+}
+
+.portrait-tagline {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-style: italic;
+    font-size: 1.15rem;
+    color: #fff;
+}
+
+.sign-tiles {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.sign-tile {
+    --el: var(--accent);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: 14px;
+    padding: 14px 6px 12px;
+    text-align: center;
+    background: radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.14), rgba(11, 12, 22, 0.7) 70%);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.4), 0 0 18px -8px var(--el);
+    color: inherit;
+    font-family: inherit;
+}
+
+.sign-tile.element-fire {
+    --el: #ef8a4c;
+}
+
+.sign-tile.element-water {
+    --el: #5fb3e6;
+}
+
+.sign-tile.element-air {
+    --el: #c9d3ee;
+}
+
+.sign-tile.element-earth {
+    --el: #8fc27a;
+}
+
+.sign-glyph {
+    font-family: 'Apple Symbols', 'Segoe UI Symbol', 'Noto Sans Symbols 2', serif;
+    font-size: 2.3rem;
+    line-height: 1.1;
+    color: var(--accent);
+    text-shadow: 0 0 14px var(--accent-glow);
+}
+
+.sign-tile.cusp .sign-glyph {
+    font-size: 1.5rem;
+    line-height: 1.6;
+}
+
+.sign-label {
+    font-size: 0.62rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-top: 8px;
+}
+
+.sign-name {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(0.7rem, 3.2vw, 0.95rem);
+    color: #fff;
+    margin-top: 2px;
+    /* "Sagittarius" is the longest: hyphenate rather than overflow */
+    hyphens: auto;
+    -webkit-hyphens: auto;
+    overflow-wrap: anywhere;
+}
+
+.sign-element {
+    font-size: 0.72rem;
+    color: var(--el);
+    margin-top: 2px;
+}
+
+.sign-hint {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    margin-top: 6px;
+    line-height: 1.3;
+}
+
+.sign-tile.empty {
+    border-style: dashed;
+    background: rgba(11, 12, 22, 0.5);
+    box-shadow: none;
+    cursor: pointer;
+}
+
+.sign-tile.empty .sign-glyph {
+    opacity: 0.35;
+}
+
+.sign-tile.empty:hover,
+.sign-tile.empty:focus-visible {
+    border-color: var(--accent);
+}
+
+.portrait-section {
+    text-align: center;
+}
+
+.portrait-section-title {
+    font-family: 'Cinzel', serif;
+    font-size: 0.78rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+}
+
+.portrait-cards {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.portrait-card {
+    width: 84px;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+}
+
+.portrait-card img {
+    display: block;
+    width: 100%;
+    aspect-ratio: var(--card-ratio);
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--accent);
+    box-shadow: 0 0 0 2px rgba(255, 244, 207, 0.25), 0 0 18px 3px rgba(255, 215, 120, 0.45);
+    transition: transform 0.25s ease;
+}
+
+.portrait-card:hover img,
+.portrait-card:focus-visible img {
+    transform: translateY(-4px);
+}
+
+.portrait-card-name {
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    line-height: 1.25;
+    margin-top: 7px;
+}
+
+.portrait-card-reason {
+    font-size: 0.66rem;
+    color: #ffe7a3;
+    margin-top: 2px;
+}
+
+.portrait-section .hint {
+    margin-top: 10px;
+}
+
+.number-tiles {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.number-tile {
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 14px;
+    padding: 14px 10px;
+    text-align: center;
+    background: rgba(11, 12, 22, 0.55);
+}
+
+.number-value {
+    font-family: 'Cinzel', serif;
+    font-size: 2.3rem;
+    line-height: 1;
+    color: var(--accent);
+    text-shadow: 0 0 16px var(--accent-glow);
+}
+
+.number-label {
+    font-size: 0.62rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-top: 8px;
+}
+
+.number-theme {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.02rem;
+    line-height: 1.3;
+    color: #fff;
+    margin-top: 4px;
+}
+
+.portrait-empty {
+    background: none;
+    border: 1px dashed var(--accent);
+    border-radius: 12px;
+    padding: 16px;
+    color: var(--text);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.1rem;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.portrait .panel-actions .btn-unlock {
+    flex: 0 1 260px;
+    margin: 0 auto;
+}
+
+.portrait .btn-link.danger,
+.portrait-privacy {
+    align-self: center;
+    text-align: center;
+}
+
+/* Revealed piece by piece right after saving */
+.portrait.celebrate .reveal-item {
+    animation: revealIn 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+    animation-delay: calc(var(--d) * 110ms);
+}
+
+@keyframes revealIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.96);
+        filter: blur(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+        filter: none;
+    }
+}
+
+@media (max-width: 380px) {
+    .sign-tiles {
+        gap: 6px;
+    }
+
+    .sign-glyph {
+        font-size: 1.9rem;
+    }
+
+    .sign-name {
+        font-size: 0.82rem;
+    }
+
+    .portrait-card {
+        width: 72px;
+    }
+}
+
+/* --- PHONES --- */
+
+/* Narrow screens: give panel content more of the width */
+@media (max-width: 420px) {
+    .panel {
+        padding: 24px 14px 18px;
+    }
+
+    .sign-tile {
+        padding: 12px 3px 10px;
+    }
+
+    .sign-label {
+        letter-spacing: 1px;
+    }
+}
+
+/* Touch screens: finger-sized tap targets (44px is Apple's guideline) */
+@media (pointer: coarse) {
+    button {
+        touch-action: manipulation;
+    }
+
+    .pill-btn {
+        min-height: 40px;
+        min-width: 40px;
+        justify-content: center;
+    }
+
+    .journal-delete,
+    .panel-close,
+    .lightbox-close,
+    .place-chosen button {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .btn-link,
+    .ritual-skip,
+    .legend-link {
+        min-height: 44px;
+    }
+
+    /* Blurring the animated sky every frame is costly on phones: use solid panels */
+    .chat-box,
+    .lightbox,
+    .panel-overlay {
+        backdrop-filter: none;
+    }
+
+    .chat-box {
+        background: rgba(21, 24, 40, 0.92);
+    }
+
+    .lightbox,
+    .panel-overlay {
+        background: rgba(4, 4, 10, 0.94);
+    }
+}
+
+/* The smallest phones (320px): keep five buttons, the moon and the ℞ badge on one row */
+@media (max-width: 360px) {
+    .top-actions {
+        gap: 4px;
+    }
+
+    .pill-btn {
+        min-width: 36px;
+        padding: 6px 8px;
+    }
+
+    .retrograde-badge {
+        padding: 1px 4px;
     }
 }

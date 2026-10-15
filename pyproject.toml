@@ -12,6 +12,8 @@ dependencies = [
     "openai>=3.31.0",
     "pydantic>=2.14.1",
     "python-dotenv>=1.2.4",
+    "skyfield>=1.55",
+    "tzdata>=2026.5",
 ]
 
 [tool.uv]

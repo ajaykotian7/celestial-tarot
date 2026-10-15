@@ -1,8 +1,10 @@
+import datetime as dt
 import hmac
 import json
 import logging
 import os
 import time
+from collections import Counter
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from dotenv import load_dotenv
@@ -12,8 +14,18 @@ from fastapi.staticfiles import StaticFiles
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
+from astrology import current_sky
 from celestial import is_witching_hour, moon_phase
-from tarot_engine import draw_spread, get_tarot_meaning, tarot_tools
+from personal import daily_card, derive_insights
+from tarot_engine import (
+    TAROT_DECK,
+    card_display_name,
+    card_image_path,
+    draw_spread,
+    find_card,
+    get_tarot_meaning,
+    tarot_tools,
+)
 
 load_dotenv()
 
@@ -55,6 +67,7 @@ MAX_MESSAGE_CHARS = 1000
 MAX_HISTORY_CONTENT_CHARS = 8000
 MAX_HISTORY_MESSAGES = 20
 HISTORY_MESSAGES_SENT_TO_MODEL = 6
+MAX_RECENT_READINGS = 5
 
 MODEL = "gpt-4o"
 MAX_COMPLETION_TOKENS = 700
@@ -62,12 +75,17 @@ MAX_COMPLETION_TOKENS = 700
 CELTIC_CROSS_COMPLETION_TOKENS = 1200
 
 SYSTEM_PROMPT = (
-    "You are an intuitive, grounded Tarot AI reader. "
+    "You are an intuitive, grounded Tarot AI reader with a gentle, reassuring voice. "
+    "Soften difficult cards and emphasise hope and the querent's own agency, without "
+    "hiding what the cards say.\n"
     "When answering a query or drawing cards:\n"
     "1. Detail individual cards and interactions.\n"
-    "2. ALWAYS conclude your reading by providing a unified takeaway in 2-3 sentences. "
+    "2. Match the length to the question: a few short paragraphs for a simple question "
+    "or a single card, a fuller reading for a complex question, and a thorough one for "
+    "a Celtic Cross. Keep follow-up answers brief.\n"
+    "3. ALWAYS conclude your reading by providing a unified takeaway in 2-3 sentences. "
     "Wrap ONLY this summary inside <tldr>...</tldr> tags.\n"
-    "3. End with an open-ended reflective question."
+    "4. End with an open-ended reflective question."
 )
 
 EMPTY_REPLY_FALLBACK = "The cards are quiet right now. Please ask your question again."
@@ -87,15 +105,50 @@ FOLLOW_UP_PROMPT = (
 )
 
 WITCHING_HOUR_PROMPT = (
-    "It is the witching hour where the querent is (after midnight). Let your voice grow "
-    "darker, more ominous and uncanny, while staying kind: never frighten them about "
-    "real-world harm."
+    "It is the witching hour where the querent is (after midnight). Let the atmosphere "
+    "grow darker, more ominous and uncanny, while your voice stays gentle and kind: "
+    "never frighten them about real-world harm."
 )
 
 
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant"]
     content: str = Field(max_length=MAX_HISTORY_CONTENT_CHARS)
+
+
+class Profile(BaseModel):
+    """Kept only in the querent's browser and sent with each request. Birth details are
+    used here to derive signs and numbers; they are never stored, logged, or sent to
+    OpenAI. Only the derived traits (and the name) reach the model."""
+
+    name: Optional[str] = Field(default=None, max_length=40)
+    birth_date: Optional[dt.date] = None
+    birth_time: Optional[dt.time] = None
+    # IANA time zone of the birth place, e.g. "Asia/Kolkata"
+    timezone: Optional[str] = Field(default=None, max_length=64)
+    latitude: Optional[float] = Field(default=None, ge=-90, le=90)
+    longitude: Optional[float] = Field(default=None, ge=-180, le=180)
+
+
+class JournalCard(BaseModel):
+    card: str = Field(max_length=40)
+    orientation: Literal["upright", "reversed"]
+    position: str = Field(max_length=40)
+
+
+class JournalEntry(BaseModel):
+    """A summary of a past reading from the querent's on-device journal."""
+
+    date: dt.date
+    question: str = Field(max_length=300)
+    cards: List[JournalCard] = Field(max_length=10)
+    tldr: Optional[str] = Field(default=None, max_length=400)
+
+
+class InsightsRequest(BaseModel):
+    profile: Optional[Profile] = None
+    # The querent's local date, so the card of the day turns over at their midnight
+    local_date: Optional[dt.date] = None
 
 
 class ChatRequest(BaseModel):
@@ -106,6 +159,10 @@ class ChatRequest(BaseModel):
     new_reading: bool = False
     # The querent's local hour, used for the witching-hour tone
     local_hour: Optional[int] = Field(default=None, ge=0, le=23)
+    local_date: Optional[dt.date] = None
+    profile: Optional[Profile] = None
+    # Most recent first
+    recent_readings: List[JournalEntry] = Field(default=[], max_length=MAX_RECENT_READINGS)
 
 
 def get_client_ip(request: Request) -> str:
@@ -172,17 +229,151 @@ def split_tldr(raw_reply: Optional[str]) -> Tuple[str, Optional[str]]:
     return reply, tldr.strip() or None
 
 
-def build_system_prompt(new_reading: bool, local_hour: Optional[int]) -> str:
+def insights_for(
+    profile: Optional[Profile], today: dt.date
+) -> Optional[Dict[str, Any]]:
+    """Derived traits for the querent, or None. A bad profile never breaks a reading."""
+    if profile is None or profile.birth_date is None or profile.birth_date > today:
+        return None
+    try:
+        return derive_insights(
+            profile.birth_date,
+            today,
+            profile.birth_time,
+            profile.timezone,
+            profile.latitude,
+            profile.longitude,
+        )
+    except Exception:
+        logger.exception("Could not derive profile insights")
+        return None
+
+
+def describe_placement(label: str, placement: Optional[Dict[str, Any]]) -> Optional[str]:
+    if not placement:
+        return None
+    if "alternatives" in placement:
+        return f"{label} on the {'/'.join(placement['alternatives'])} cusp"
+    if label == "Rising":
+        return f"{placement['sign']} rising ({placement['element']})"
+    return f"{label} in {placement['sign']} ({placement['element']})"
+
+
+def profile_prompt(
+    profile: Optional[Profile], insights: Optional[Dict[str, Any]]
+) -> Optional[str]:
+    if profile is None:
+        return None
+    lines = []
+    name = " ".join((profile.name or "").split())
+    if name:
+        lines.append(f"Their name is {name}. Address them by name now and then.")
+    if insights:
+        placements = [
+            describe_placement("Sun", insights["sun"]),
+            describe_placement("Moon", insights["moon"]),
+            describe_placement("Rising", insights["rising"]),
+        ]
+        placements = [p for p in placements if p]
+        if placements:
+            lines.append("Their chart: " + ", ".join(placements) + ".")
+        lines.append(
+            f"Birth card: {', '.join(insights['birth_cards'])}. "
+            f"Life path number {insights['life_path']}. "
+            f"Personal year {insights['personal_year']}: {insights['personal_year_theme']}."
+        )
+        personal = ", ".join(
+            f"{card_display_name(key)} ({reason})"
+            for key, reason in insights["personal_cards"].items()
+        )
+        lines.append(
+            f"Cards with personal significance: {personal}. If one appears in the spread "
+            "(it is marked 'personal'), point it out as especially meaningful."
+        )
+        lines.append(
+            "Weave these in lightly where they illuminate the cards; don't recite them."
+        )
+    if not lines:
+        return None
+    return "About the querent:\n" + "\n".join(f"- {line}" for line in lines)
+
+
+def journal_prompt(entries: List[JournalEntry]) -> Optional[str]:
+    if not entries:
+        return None
+    lines = []
+    counts: Counter = Counter()
+    for entry in entries:
+        cards = ", ".join(
+            c.card + (" (reversed)" if c.orientation == "reversed" else "")
+            for c in entry.cards
+        )
+        counts.update(c.card for c in entry.cards)
+        line = f'- {entry.date.isoformat()}: "{entry.question}" drew {cards}.'
+        if entry.tldr:
+            line += f" Takeaway: {entry.tldr}"
+        lines.append(line)
+    text = "The querent's recent readings (most recent first):\n" + "\n".join(lines)
+    recurring = [f"{card} ({n} times)" for card, n in counts.most_common() if n > 1]
+    if recurring:
+        text += "\nCards that keep returning to them: " + ", ".join(recurring) + "."
+    return (
+        text + "\nIf a card from these readings appears again, or this question continues "
+        "an earlier theme, mention the connection briefly."
+    )
+
+
+def build_system_prompt(
+    payload: ChatRequest, insights: Optional[Dict[str, Any]] = None
+) -> str:
     moon = moon_phase()
-    parts = [
-        SYSTEM_PROMPT,
-        f"The reading takes place under a {moon['name']}. "
-        "Weave its symbolism in briefly where it fits.",
-    ]
-    parts.append(NEW_READING_PROMPT if new_reading else FOLLOW_UP_PROMPT)
-    if is_witching_hour(local_hour):
+    sky_now = current_sky()
+    sky_text = (
+        f"The reading takes place under a {moon['name']}, in {sky_now['season']} season."
+    )
+    if sky_now["mercury_retrograde"]:
+        sky_text += " Mercury is retrograde, a time of miscommunication, delays and revisiting the past."
+    parts = [SYSTEM_PROMPT, sky_text + " Weave this in briefly where it fits."]
+    parts.append(NEW_READING_PROMPT if payload.new_reading else FOLLOW_UP_PROMPT)
+    if is_witching_hour(payload.local_hour):
         parts.append(WITCHING_HOUR_PROMPT)
+    for extra in (
+        profile_prompt(payload.profile, insights),
+        journal_prompt(payload.recent_readings),
+    ):
+        if extra:
+            parts.append(extra)
     return "\n\n".join(parts)
+
+
+def mark_personal_cards(
+    cards: List[Dict[str, Any]], insights: Optional[Dict[str, Any]]
+) -> None:
+    """Flag drawn cards that are personally significant (birth card, sign cards)."""
+    if not insights:
+        return
+    for card in cards:
+        reason = insights["personal_cards"].get(find_card(card["card"]) or "")
+        if reason:
+            card["personal"] = reason[0].upper() + reason[1:]
+
+
+def public_insights(insights: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    if insights is None:
+        return None
+    return {
+        **insights,
+        # With artwork and meaning, for the profile portrait
+        "personal_cards": [
+            {
+                "card": card_display_name(key),
+                "reason": reason,
+                "image": card_image_path(key),
+                "meaning": TAROT_DECK[key]["upright"],
+            }
+            for key, reason in insights["personal_cards"].items()
+        ],
+    }
 
 
 @app.get("/")
@@ -212,8 +403,22 @@ async def verify_pin(request: Request, x_app_pin: Optional[str] = Header(None)):
 
 @app.get("/api/sky")
 def sky():
-    """Current moon phase, shown in the UI before any reading."""
-    return {"moon": moon_phase()}
+    """Current moon phase, astrological season and Mercury's motion, shown in the UI."""
+    return {"moon": moon_phase(), **current_sky()}
+
+
+@app.post("/api/insights")
+def insights(payload: InsightsRequest):
+    """Derive signs, birth cards and numbers from a profile (nothing is stored), plus
+    the card of the day. Works without a profile too: everyone shares that day's card."""
+    today = payload.local_date or dt.datetime.now(dt.timezone.utc).date()
+    profile = payload.profile
+    derived = insights_for(profile, today)
+    birth_date = profile.birth_date if profile and derived else None
+    return {
+        "insights": public_insights(derived),
+        "daily_card": daily_card(today, birth_date),
+    }
 
 
 @app.post("/api/chat")
@@ -241,7 +446,9 @@ async def chat_endpoint(
 
     # 3. Agent Execution
     try:
-        system_prompt = build_system_prompt(payload.new_reading, payload.local_hour)
+        today = payload.local_date or dt.datetime.now(dt.timezone.utc).date()
+        querent = insights_for(payload.profile, today)
+        system_prompt = build_system_prompt(payload, querent)
         messages: List[Any] = [{"role": "system", "content": system_prompt}]
 
         for h in payload.history[-HISTORY_MESSAGES_SENT_TO_MODEL:]:
@@ -272,6 +479,8 @@ async def chat_endpoint(
                 fn_name = tool_call.function.name
                 tool_res = run_tool(fn_name, tool_call.function.arguments)
                 if fn_name == "draw_spread" and "cards" in tool_res:
+                    # Marked before the model sees the result, so it can call them out
+                    mark_personal_cards(tool_res["cards"], querent)
                     drawn_cards_data = tool_res["cards"]
                     drawn_spread = tool_res["spread_type"]
 

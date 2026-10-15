@@ -197,6 +197,15 @@ export function cut() {
     });
 }
 
+// A rising shimmer when a personally significant card turns over
+export function personal() {
+    if (!canPlay()) return;
+    const now = ctx.currentTime;
+    [659.25, 830.61, 987.77, 1318.51].forEach((freq, i) => {
+        tone({ at: now + 0.25 + i * 0.09, freq, duration: 1.6, peak: 0.07 });
+    });
+}
+
 // A bell for the core takeaway
 export function chime() {
     if (!canPlay()) return;

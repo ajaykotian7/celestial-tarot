@@ -1,8 +1,10 @@
 import { el, storage, buzz } from "./util.js";
 import * as sound from "./sound.js";
 import { startSky } from "./sky.js";
-import { revealSpread, clearSpread, closeLightbox } from "./cards.js";
+import { revealSpread, clearSpread, openLightbox, closeLightbox } from "./cards.js";
 import { runRitual } from "./ritual.js";
+import * as profile from "./profile.js";
+import * as journal from "./journal.js";
 
 // The server only sends the last 6 messages to the model, so don't send more
 const MAX_HISTORY_MESSAGES = 6;
@@ -17,6 +19,9 @@ const history = [];
 // While cards are on the table, questions are follow-ups about them (no new draw)
 let cardsOnTable = false;
 let ritualEnabled = storage.get("tarot_ritual") !== "off";
+// Derived from the profile by the server: signs, birth card, numbers
+let insights = null;
+let dailyCard = null;
 
 const $ = (id) => document.getElementById(id);
 const sky = startSky($("sky-canvas"));
@@ -74,6 +79,11 @@ function unlockUI() {
         blocker.style.visibility = "hidden";
         blocker.style.display = "none";
         $("user-input").focus();
+        // First visit: invite the querent to share a little about themselves
+        if (profile.shouldPrompt()) {
+            profile.openPanel(insights);
+            profile.markPrompted();
+        }
     }, 400);
 }
 
@@ -88,13 +98,32 @@ async function loadSky() {
     try {
         const res = await fetch("/api/sky");
         if (!res.ok) return;
-        const { moon } = await res.json();
+        const { moon, season, mercury_retrograde } = await res.json();
         $("moon-emoji").textContent = moon.emoji;
-        $("moon-name").textContent = moon.name;
-        $("moon-label").title = `Tonight's moon: ${moon.name}`;
+        $("moon-name").textContent = `${moon.name} · ${season} season`;
+        $("moon-label").title = `Tonight's moon: ${moon.name}. The Sun is in ${season}.`;
+        $("retrograde-badge").hidden = !mercury_retrograde;
         sky.setMoon(moon.fraction);
     } catch {
         /* the sky simply has no moon tonight */
+    }
+}
+
+// Signs and numbers for the profile panel, and the card of the day
+async function loadInsights() {
+    try {
+        const res = await fetch("/api/insights", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ profile: profile.toRequest(), local_date: profile.localDate() }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        insights = data.insights;
+        dailyCard = data.daily_card;
+        $("daily-card-btn").hidden = !dailyCard;
+    } catch {
+        /* the profile panel just won't show derived insights */
     }
 }
 
@@ -147,6 +176,9 @@ async function fetchReading(message, newReading) {
             history,
             new_reading: newReading,
             local_hour: new Date().getHours(),
+            local_date: profile.localDate(),
+            profile: profile.toRequest(),
+            recent_readings: journal.recentForOracle(),
         }),
     });
 
@@ -215,9 +247,14 @@ async function sendInquiry() {
 
         if (data.cards && data.cards.length > 0) {
             await revealSpread($("cards-tray"), $("spread-legend"), data.cards, data.spread, {
-                onFlip: () => {
+                onFlip: (i) => {
                     sound.flip();
-                    buzz(15);
+                    if (data.cards[i].personal) {
+                        sound.personal();
+                        buzz([15, 80, 30]);
+                    } else {
+                        buzz(15);
+                    }
                 },
             });
         }
@@ -240,7 +277,16 @@ async function sendInquiry() {
             history.splice(0, history.length - MAX_HISTORY_MESSAGES);
         }
 
-        if (data.cards && data.cards.length > 0) setCardsOnTable(true);
+        if (data.cards && data.cards.length > 0) {
+            journal.add({
+                date: profile.localDate(),
+                question: text,
+                spread: data.spread,
+                cards: data.cards,
+                tldr: data.tldr,
+            });
+            setCardsOnTable(true);
+        }
     } catch (err) {
         chat.replaceChildren(el("span", "error-text", `Oracle disrupted: ${err.message}`));
     } finally {
@@ -276,8 +322,36 @@ $("new-reading-btn").addEventListener("click", startNewReading);
 
 $("lightbox").addEventListener("click", closeLightbox);
 document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeLightbox();
+    if (e.key !== "Escape") return;
+    // Close the topmost layer only: the card view can sit above the journal
+    if (closeLightbox()) return;
+    profile.closePanel();
+    journal.closePanel();
 });
+
+$("profile-btn").addEventListener("click", () => profile.openPanel(insights));
+$("journal-btn").addEventListener("click", journal.openPanel);
+$("daily-card-btn").addEventListener("click", () => dailyCard && openLightbox(dailyCard));
+
+profile.initPanel({
+    onSaved: async () => {
+        await loadInsights();
+        profile.showPortrait(insights, { celebrate: true });
+        sound.chime();
+    },
+    onCardClick: openLightbox,
+    onForget: async () => {
+        profile.forget();
+        journal.forget();
+        await loadInsights();
+        profile.closePanel();
+        startNewReading();
+        $("chat-output").replaceChildren(
+            el("em", null, "Your profile and journal have been erased from this device.")
+        );
+    },
+});
+journal.initPanel({ onCardClick: openLightbox });
 
 // Browsers only allow audio after a user gesture
 document.addEventListener("pointerdown", sound.onUserGesture, { once: true });
@@ -287,6 +361,7 @@ renderToggles();
 startNewReading();
 applyWitchingHour();
 loadSky();
+loadInsights();
 
 (async () => {
     const storedPin = storage.get("tarot_pin");

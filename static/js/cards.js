@@ -16,7 +16,9 @@ function layoutFor(spread, count) {
 }
 
 function describe(card) {
-    return `${card.position}: ${card.card}${card.orientation === "reversed" ? ", reversed" : ""}`;
+    const reversed = card.orientation === "reversed" ? ", reversed" : "";
+    const personal = card.personal ? `. ${card.personal}` : "";
+    return `${card.position}: ${card.card}${reversed}${personal}`;
 }
 
 function buildCard(card, index, layout) {
@@ -25,6 +27,7 @@ function buildCard(card, index, layout) {
     node.style.setProperty("--i", index);
     node.setAttribute("aria-label", "Face-down card");
     if (card.orientation === "reversed") node.classList.add("reversed");
+    if (card.personal) node.classList.add("personal");
     if (layout === "celtic") {
         node.style.gridArea = `c${index === 1 ? 1 : index + 1}`;
         if (index === 1) node.classList.add("crossing");
@@ -55,6 +58,7 @@ function buildCard(card, index, layout) {
             el("div", "card-title", card.card),
             el("div", "card-orient", card.orientation)
         );
+        if (card.personal) caption.append(el("div", "card-personal", `★ ${card.personal}`));
         node.append(caption);
     }
 
@@ -109,6 +113,7 @@ export async function revealSpread(tray, legend, cards, spread, { onFlip } = {})
                     ` — ${c.card}`,
                     el("em", null, c.orientation === "reversed" ? " (reversed)" : "")
                 );
+                if (c.personal) link.append(el("span", "legend-personal", ` ★ ${c.personal}`));
                 link.addEventListener("click", () => openLightbox(c));
                 item.append(link);
                 return item;
@@ -138,15 +143,20 @@ export function openLightbox(card) {
     document.getElementById("lightbox-name").textContent = card.card;
     document.getElementById("lightbox-orient").textContent = card.orientation;
     document.getElementById("lightbox-meaning").textContent = card.meaning || "";
+    const personal = document.getElementById("lightbox-personal");
+    personal.textContent = card.personal ? `★ ${card.personal}` : "";
+    personal.hidden = !card.personal;
 
     lastFocus = document.activeElement;
     box.hidden = false;
     document.getElementById("lightbox-close").focus();
 }
 
+// Returns true if it was open
 export function closeLightbox() {
     const box = document.getElementById("lightbox");
-    if (box.hidden) return;
+    if (box.hidden) return false;
     box.hidden = true;
     lastFocus?.focus?.();
+    return true;
 }

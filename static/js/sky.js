@@ -20,14 +20,7 @@ export function startSky(canvas) {
     let colors = PALETTE.calm;
     let frame = null;
 
-    function resize() {
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        width = window.innerWidth;
-        height = window.innerHeight;
-        canvas.width = Math.round(width * dpr);
-        canvas.height = Math.round(height * dpr);
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
+    function populate() {
         const starCount = Math.min(240, Math.round((width * height) / 4500));
         stars = Array.from({ length: starCount }, () => ({
             x: Math.random() * width,
@@ -39,6 +32,34 @@ export function startSky(canvas) {
         }));
         const moteCount = Math.min(36, Math.round(width / 28));
         motes = Array.from({ length: moteCount }, () => newMote(true));
+    }
+
+    function resize() {
+        const previousWidth = width;
+        const previousHeight = height;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        width = document.documentElement.clientWidth;
+        height = window.innerHeight;
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        // Match the CSS size to the drawing size, or mobile Safari's 100vh (which
+        // includes the area behind the toolbar) stretches the sky and the moon
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        if (!stars.length) {
+            populate();
+        } else {
+            // Phones resize as the browser bar shows and hides while scrolling:
+            // stretch the existing sky rather than scattering new stars
+            const sx = width / previousWidth;
+            const sy = height / previousHeight;
+            for (const p of [...stars, ...motes]) {
+                p.x *= sx;
+                p.y *= sy;
+            }
+        }
         if (prefersReducedMotion()) draw(performance.now());
     }
 

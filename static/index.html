@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+        content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Celestial Tarot AI</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,8 +39,15 @@
         <span id="moon-label" class="moon-label">
             <span id="moon-emoji" aria-hidden="true"></span>
             <span id="moon-name" class="pill-label"></span>
+            <span id="retrograde-badge" class="retrograde-badge" title="Mercury is retrograde" hidden>☿ ℞</span>
         </span>
         <div class="top-actions">
+            <button id="profile-btn" class="pill-btn" type="button" aria-label="Your profile">
+                <span class="pill-icon" aria-hidden="true">☉</span><span class="pill-label">You</span>
+            </button>
+            <button id="journal-btn" class="pill-btn" type="button" aria-label="Reading journal">
+                <span class="pill-icon" aria-hidden="true">📖</span><span class="pill-label">Journal</span>
+            </button>
             <button id="ritual-toggle" class="pill-btn" type="button" aria-pressed="true" aria-label="Ritual before readings">
                 <span class="pill-icon" aria-hidden="true">✦</span><span class="pill-label">Ritual on</span>
             </button>
@@ -56,6 +63,7 @@
     <header>
         <h1>Celestial Tarot</h1>
         <p id="tagline">Ask your question and let the cards illuminate your path</p>
+        <button id="daily-card-btn" class="daily-card-btn" type="button" hidden>✦ Your card for today</button>
     </header>
 
     <main id="main-container">
@@ -106,6 +114,81 @@
         </div>
     </div>
 
+    <!-- Profile: kept only on this device -->
+    <div id="profile-panel" class="panel-overlay" role="dialog" aria-modal="true" aria-label="Your profile" hidden>
+        <div class="panel">
+            <button id="profile-close" class="panel-close" type="button" aria-label="Close">✕</button>
+
+            <!-- Portrait: what the cards know, shown once a profile exists -->
+            <section id="profile-portrait" class="portrait" aria-live="polite" hidden>
+                <div id="portrait-body"></div>
+                <div class="panel-actions">
+                    <button id="profile-edit-btn" type="button" class="btn-unlock">✎ Edit details</button>
+                </div>
+                <button id="forget-me" type="button" class="btn-link danger">
+                    Forget me: erase my profile and journal from this device
+                </button>
+                <p class="hint portrait-privacy">Kept only on this device.</p>
+            </section>
+
+            <!-- Form: enter or edit details -->
+            <div id="profile-edit">
+            <h2 id="profile-title">Let the cards know you</h2>
+            <p class="panel-sub">
+                Everything here is optional and saved only on this device. Your birth details are used
+                to work out your signs, birth card and numbers. Only those reach the oracle, never the
+                details themselves.
+            </p>
+            <form id="profile-form" class="profile-form" autocomplete="off">
+                <label class="field">
+                    <span>What should the oracle call you?</span>
+                    <input name="name" type="text" maxlength="40" />
+                </label>
+                <div class="field-row">
+                    <label class="field">
+                        <span>Date of birth</span>
+                        <input name="birth_date" type="date" min="1900-01-03" />
+                    </label>
+                    <label class="field">
+                        <span>Birth time <em>(optional)</em></span>
+                        <input name="birth_time" type="time" />
+                    </label>
+                </div>
+                <div class="field">
+                    <label for="place-input">Birth place <em>(optional: with birth time, reveals your rising sign)</em></label>
+                    <input id="place-input" type="text" placeholder="Search a city…" />
+                    <ul id="place-results" class="place-results"></ul>
+                    <div id="place-chosen" class="place-chosen" hidden>
+                        <span id="place-chosen-label"></span>
+                        <button id="place-clear" type="button" aria-label="Clear birth place">✕</button>
+                    </div>
+                    <span class="hint">City search by Open-Meteo.</span>
+                </div>
+
+                <div class="panel-actions">
+                    <button id="profile-save" type="submit" class="btn-unlock">Reveal what the cards know</button>
+                    <button id="profile-skip" type="button" class="btn-link">Not now</button>
+                </div>
+            </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reading journal: kept only on this device -->
+    <div id="journal-panel" class="panel-overlay" role="dialog" aria-modal="true" aria-labelledby="journal-title" hidden>
+        <div class="panel">
+            <button id="journal-close" class="panel-close" type="button" aria-label="Close">✕</button>
+            <h2 id="journal-title">Your journal</h2>
+            <p class="panel-sub">
+                Saved only on this device. Your last few readings are shared with the oracle so it
+                can notice cards and themes that keep returning.
+            </p>
+            <div id="journal-recurring" class="insights" hidden></div>
+            <p id="journal-empty" class="hint">No readings yet. Your readings will appear here.</p>
+            <ol id="journal-list" class="journal-list"></ol>
+        </div>
+    </div>
+
     <!-- Enlarged card view -->
     <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-labelledby="lightbox-name" hidden>
         <figure class="lightbox-card">
@@ -115,6 +198,7 @@
                 <h3 id="lightbox-name"></h3>
                 <div id="lightbox-orient" class="card-orient"></div>
                 <p id="lightbox-meaning"></p>
+                <p id="lightbox-personal" class="card-personal" hidden></p>
             </figcaption>
             <button id="lightbox-close" class="lightbox-close" type="button" aria-label="Close">✕</button>
         </figure>

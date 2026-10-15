@@ -1,6 +1,6 @@
 # 🔮 Celestial Tarot AI
 
-An interactive, AI-powered tarot web app. Ask a question and the oracle decides how many cards it deserves, draws them from a full 78-card Rider-Waite-Smith deck using OpenAI function calling, and turns them over one by one before giving its reading, with a TL;DR takeaway at the end. A pre-reading ritual, an ambient soundscape, a living night sky that follows the real moon, and a witching-hour mode after midnight set the mood.
+An interactive, AI-powered tarot web app. Ask a question and the oracle decides how many cards it deserves, draws them from a full 78-card Rider-Waite-Smith deck using OpenAI function calling, and turns them over one by one before giving its reading, with a TL;DR takeaway at the end. Share your birth date and the reading becomes yours: your signs, birth card and numbers shape the interpretation, and the oracle remembers the cards that keep finding you. A pre-reading ritual, an ambient soundscape, a living night sky that follows the real moon, and a witching-hour mode after midnight set the mood.
 
 Deployed live on **Render**.
 
@@ -19,6 +19,27 @@ Deployed live on **Render**.
 - **Full 78-card deck:** All 22 Major Arcana and 56 Minor Arcana, each with its own upright and reversed meaning, and the original Rider-Waite-Smith artwork.
 - **OpenAI tool calling:** The model calls `draw_spread` and `get_tarot_meaning`, which run in Python, so the cards are genuinely random rather than invented by the model.
 - **TL;DR takeaway:** A 2–3 sentence summary in a gilded box above the full reading.
+
+### Personal readings
+
+- **"Let the cards know you":** An optional profile, offered after the first unlock and editable from **☉ You** in the top bar:
+  - **Name:** the reader addresses you by it.
+  - **Date of birth:** your **sun sign** and element, your **birth card** (Mary K. Greer's method), **life path number**, and **personal year**.
+  - **Birth time and place** (optional): your exact **moon sign** and your **rising sign**. Without a birth time, a sign that changed on your birthday is shown as a cusp rather than guessed.
+- **Your celestial portrait:** After saving, "What the cards know" is revealed piece by piece: Sun, Moon and Rising tiles with their zodiac glyphs and elements, the artwork of the cards that are yours, and your life path and personal year. **✎ Edit details** reopens the form with what you entered.
+- **Personal cards glow:** If your birth card, or the card of your sun, moon or rising sign (e.g. Scorpio ↔ Death), appears in a spread, it glows with a ★ note and its own chime, and the reader calls it out.
+- **Reading journal:** Every reading is saved to **📖 Journal** with its question, cards and takeaway. The reader sees your last 5 readings, so it can notice cards that keep returning and themes that continue.
+- **Card of the day:** **✦ Your card for today** is drawn from your birth date and today's date, so it stays the same all day.
+- **A gentle reader:** The reader always speaks gently, softening difficult cards without hiding what they say, and sizes each answer to the question: brief for simple questions, thorough for deep ones.
+- **Live astrology:** The current astrological season, and Mercury retrograde (shown as ☿ ℞), are woven into every reading.
+
+### Privacy
+
+- The profile and journal are stored **only in your browser**. The server stores nothing.
+- Your birth date, time and place are sent to the server only to work out your signs and numbers. **Only those derived traits (and your name) are sent to OpenAI**, never the birth details themselves.
+- Your last few readings (questions, cards and takeaways) are included in the prompt so the reader can spot patterns.
+- City search for the birth place goes straight from your browser to [Open-Meteo](https://open-meteo.com/).
+- **Forget me** in the profile panel erases the profile and journal from the device.
 
 ### Atmosphere
 
@@ -46,6 +67,7 @@ Deployed live on **Render**.
 - **AI / LLM:** [OpenAI Python SDK](https://github.com/openai/openai-python) (GPT-4o with function calling)
 - **Package management:** [uv](https://github.com/astral-sh/uv)
 - **Frontend:** Vanilla HTML, CSS (3D transforms, keyframe animations, Grid) and JavaScript ES modules, with Canvas for the sky and the Web Audio API for sound. No build step.
+- **Astronomy:** [Skyfield](https://rhodesmill.org/skyfield/) with NASA JPL's DE440s ephemeris for sun, moon and rising signs and Mercury's motion
 - **Hosting:** [Render](https://render.com) (Web Service)
 
 ---
@@ -55,10 +77,12 @@ Deployed live on **Render**.
 ```text
 tarot-space/
 ├── static/
-│   ├── index.html          # Page markup: gatekeeper, table, ritual, card lightbox
+│   ├── index.html          # Page markup: gatekeeper, table, ritual, panels, card lightbox
 │   ├── css/style.css       # Theme, card flip, layouts, witching hour, reduced motion
 │   ├── js/
 │   │   ├── main.js         # App flow: PIN, readings vs follow-ups, toggles
+│   │   ├── profile.js      # Profile panel, place search, derived insights
+│   │   ├── journal.js      # Reading journal and the summary sent to the oracle
 │   │   ├── cards.js        # Dealing, flipping and enlarging cards
 │   │   ├── ritual.js       # Breathe / cut / choose-a-pile ritual
 │   │   ├── sky.js          # Canvas stars, dust, shooting stars and moon
@@ -68,6 +92,9 @@ tarot-space/
 ├── app.py                  # FastAPI server, guardrails, and the agent loop
 ├── tarot_engine.py         # Deck, meanings, spreads, and OpenAI tool schemas
 ├── celestial.py            # Moon phase and witching-hour helpers
+├── astrology.py            # Sun, moon and rising signs; season; Mercury retrograde
+├── personal.py             # Birth cards, numerology, sign cards, card of the day
+├── data/de440s-excerpt.bsp # JPL ephemeris excerpt (Sun, Moon, Earth, Mercury, 1900–2100)
 ├── tests/                  # pytest suite (OpenAI mocked)
 ├── requirements.txt        # Production dependencies for Render
 ├── pyproject.toml          # Project configuration (uv, pytest)
@@ -196,13 +223,43 @@ Checks the PIN before letting the user past the gatekeeper screen.
 
 ### `GET /api/sky`
 
-The current moon phase, shown in the UI and drawn in the sky. No PIN required.
+The current sky, shown in the UI. No PIN required.
 
 ```json
-{"moon": {"name": "Waxing Crescent", "emoji": "🌒", "fraction": 0.1052}}
+{
+  "moon": {"name": "Waxing Crescent", "emoji": "🌒", "fraction": 0.1052},
+  "season": "Libra",
+  "mercury_retrograde": false
+}
 ```
 
-`fraction` is the position in the lunar cycle: `0` is a new moon and `0.5` is a full moon.
+`fraction` is the position in the lunar cycle: `0` is a new moon and `0.5` is a full moon. `season` is the Sun's current sign.
+
+### `POST /api/insights`
+
+Works out signs, birth card and numbers from a profile, plus the card of the day. Nothing is stored. No PIN required.
+
+- **Body:** `profile` (optional, same shape as in `/api/chat`) and `local_date` (optional, `YYYY-MM-DD`, so the card of the day changes at the user's midnight).
+- **Response:** `insights` is `null` without a birth date. Without a profile, everyone gets the same card of the day.
+  ```json
+  {
+    "insights": {
+      "sun": {"sign": "Cancer", "element": "water"},
+      "moon": {"sign": "Aries", "element": "fire"},
+      "rising": {"sign": "Scorpio", "element": "water"},
+      "birth_cards": ["The Hierophant"],
+      "life_path": 5,
+      "life_path_theme": "freedom and change",
+      "personal_year": 5,
+      "personal_year_theme": "change, freedom and adventure",
+      "personal_cards": [
+        {"card": "The Hierophant", "reason": "your birth card", "image": "/static/cards/the-hierophant.webp", "meaning": "..."}
+      ]
+    },
+    "daily_card": {"position": "Your card for today", "card": "The Star", "orientation": "upright", "meaning": "...", "image": "/static/cards/the-star.webp"}
+  }
+  ```
+  A sign that changed during a birthday with no birth time comes back with `"alternatives": ["Pisces", "Aries"]`. `rising` needs both birth time and place.
 
 ### `POST /api/chat`
 
@@ -214,15 +271,21 @@ Main conversational endpoint. Runs the GPT-4o function-calling loop and returns 
   - `history`: up to 20 messages with role `user` or `assistant`, each up to 8,000 characters. Only the last 6 are sent to the model.
   - `new_reading`: `true` for a fresh question, which must draw cards in a spread the model sizes to the question. `false` (the default) for a follow-up, which is answered from the cards already drawn.
   - `local_hour`: optional, `0`–`23`. The user's local hour, used for the witching-hour tone.
+  - `local_date`: optional, `YYYY-MM-DD`, for the personal year.
+  - `profile`: optional. `name` (up to 40 characters), `birth_date`, `birth_time` (`HH:MM`), `timezone` (IANA, e.g. `Asia/Kolkata`), `latitude` and `longitude`. Every field is optional. Birth details are used only to derive traits and are never sent to OpenAI.
+  - `recent_readings`: optional, up to 5 journal summaries, most recent first, each with `date`, `question` (up to 300 characters), `cards` (`card`, `orientation`, `position`) and `tldr` (up to 400 characters).
   ```json
   {
     "message": "Should I take the new job offer?",
     "history": [],
     "new_reading": true,
-    "local_hour": 21
+    "local_hour": 21,
+    "local_date": "2026-10-15",
+    "profile": {"name": "Ajay", "birth_date": "1990-07-15"},
+    "recent_readings": []
   }
   ```
-- **Response:** `spread` is the spread that was drawn, or `null` if none was. `cards` is empty when nothing was drawn, and `tldr` is `null` if the model didn't include one.
+- **Response:** `spread` is the spread that was drawn, or `null` if none was. `cards` is empty when nothing was drawn, and `tldr` is `null` if the model didn't include one. A card that is personally significant to the querent has a `personal` field, e.g. `"Your birth card"`.
   ```json
   {
     "reply": "Narrative interpretation...",
@@ -239,12 +302,14 @@ Main conversational endpoint. Runs the GPT-4o function-calling loop and returns 
     "tldr": "Core takeaway summary..."
   }
   ```
-- **Errors:** `401` invalid PIN, `422` invalid body (empty or too-long message, unknown role, invalid `local_hour`), `429` rate limit exceeded (5 requests/minute per IP), `500` missing API key or a failed reading (details are logged on the server, not returned).
+- **Errors:** `401` invalid PIN, `422` invalid body (empty or too-long message, unknown role, invalid `local_hour`, profile or journal fields out of range), `429` rate limit exceeded (5 requests/minute per IP), `500` missing API key or a failed reading (details are logged on the server, not returned).
 
 ---
 
 ## 🎨 Credits
 
 Card artwork is the original 1909 Rider-Waite-Smith deck illustrated by **Pamela Colman Smith**, which is in the public domain. The scans come from [Wikimedia Commons](https://commons.wikimedia.org/wiki/Category:Rider-Waite-Smith_tarot_deck_(TaionWC)) and were resized and converted to WebP for this app.
+
+Planetary positions use NASA JPL's [DE440s](https://ssd.jpl.nasa.gov/planets/eph_export.html) ephemeris through [Skyfield](https://rhodesmill.org/skyfield/). Birth-place search uses the [Open-Meteo Geocoding API](https://open-meteo.com/en/docs/geocoding-api).
 
 Readings are generated by AI and are for entertainment and reflection only.
