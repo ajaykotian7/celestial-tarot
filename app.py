@@ -195,8 +195,16 @@ def is_rate_limited(store: Dict[str, List[float]], key: str, max_requests: int) 
     return False
 
 
+def normalize_pin(value: str) -> str:
+    """The PIN can be a passphrase, so ignore case and extra spaces (phones
+    auto-capitalise the first word)."""
+    return " ".join(value.split()).casefold()
+
+
 def pin_matches(candidate: Optional[str]) -> bool:
-    return hmac.compare_digest((candidate or "").encode(), APP_ACCESS_PIN.encode())
+    return hmac.compare_digest(
+        normalize_pin(candidate or "").encode(), normalize_pin(APP_ACCESS_PIN).encode()
+    )
 
 
 def run_tool(name: str, raw_args: Optional[str]) -> Dict[str, Any]:

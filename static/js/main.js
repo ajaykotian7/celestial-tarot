@@ -45,6 +45,12 @@ async function attemptUnlock() {
     const btn = $("unlock-btn");
     const pin = pinInput.value.trim();
 
+    // HTTP headers only carry plain ASCII; fetch would throw on anything else
+    if (/[^\x20-\x7E]/.test(pin)) {
+        showBlockerError("Use only plain letters, numbers and spaces.");
+        return;
+    }
+
     $("blocker-error").style.display = "none";
     btn.disabled = true;
     btn.textContent = "VERIFYING...";
@@ -57,7 +63,7 @@ async function attemptUnlock() {
         } else if (status === 429) {
             showBlockerError("Too many attempts. Wait a minute and try again.");
         } else {
-            showBlockerError("Invalid PIN. Access denied.");
+            showBlockerError("Invalid passphrase. Access denied.");
         }
     } catch {
         showBlockerError("Could not reach oracle server.");

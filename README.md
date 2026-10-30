@@ -58,7 +58,7 @@ Deployed live on **Render**.
 
 ### Protection
 
-- **PIN gatekeeper:** When `APP_ACCESS_PIN` is set, the app is locked behind a PIN screen and the API rejects requests without it. PIN attempts are limited to 5 per minute per IP.
+- **Passphrase gatekeeper:** When `APP_ACCESS_PIN` is set, the app is locked behind a passphrase screen and the API rejects requests without it. Case and extra spaces are ignored, and attempts are limited to 5 per minute per IP.
 - **IP rate limiting:** 5 readings per minute per IP, using the proxy-added `X-Forwarded-For` entry so clients can't spoof their way around it.
 - **Input and token caps:** Questions are capped at 1,000 characters and only the last 6 history messages reach the model. Each completion is capped at 700 tokens, or 1,200 for a Celtic Cross.
 - **Safe rendering:** Model output is always rendered as plain text, never as HTML.
@@ -138,7 +138,7 @@ Then edit `.env`:
 | Variable | Required | Description |
 |---|---|---|
 | `OPENAI_API_KEY` | Yes | Your OpenAI API key (`MY_OPEN_AI_KEY` is accepted as a fallback). |
-| `APP_ACCESS_PIN` | No | PIN required to unlock the app. Leave empty to disable the gatekeeper. |
+| `APP_ACCESS_PIN` | No | Passphrase (or PIN) required to unlock the app. Leave empty to disable the gatekeeper. |
 
 ### 4. Install dependencies
 
@@ -170,7 +170,7 @@ Or, with the pip virtual environment activated:
 uvicorn app:app --reload --port 8000
 ```
 
-Open [http://localhost:8000](http://localhost:8000) in your browser. If you set `APP_ACCESS_PIN`, enter it to unlock the sanctuary.
+Open [http://localhost:8000](http://localhost:8000) in your browser. If you set `APP_ACCESS_PIN`, enter the passphrase to unlock the sanctuary.
 
 ### 6. Run the tests
 
@@ -205,7 +205,7 @@ Set these in the Render Dashboard under **Environment**:
 | Variable | Required | Description |
 |---|---|---|
 | `OPENAI_API_KEY` | Yes | Your OpenAI API key. |
-| `APP_ACCESS_PIN` | Recommended | PIN required by the gatekeeper screen. Without it, the deployed app is open to anyone. Use 6+ digits. |
+| `APP_ACCESS_PIN` | Recommended | Passphrase required by the gatekeeper screen. Without it, the deployed app is open to anyone. Use four or more random words in plain ASCII, e.g. `velvet comet harbor lantern`; case and extra spaces are ignored. |
 | `TRUSTED_PROXY_HOPS` | No | How many proxies append to `X-Forwarded-For` (default `1`). The client IP for rate limiting is read this many entries from the right. Set `0` to ignore the header. |
 
 > If you change dependencies, regenerate `requirements.txt` from the lockfile (`--no-dev` keeps pytest out of production):
@@ -217,7 +217,7 @@ Set these in the Render Dashboard under **Environment**:
 
 ### `POST /api/verify-pin`
 
-Checks the PIN before letting the user past the gatekeeper screen.
+Checks the passphrase before letting the user past the gatekeeper screen. Matching ignores case and extra spaces.
 
 - **Headers:** `x-app-pin: <PIN>`
 - **Responses:**

@@ -98,6 +98,13 @@ def test_verify_pin_rejects_wrong_pin(http):
     assert http.post("/api/verify-pin", headers={"x-app-pin": "0000"}).status_code == 401
 
 
+def test_verify_pin_accepts_passphrase_ignoring_case_and_spacing(http, monkeypatch):
+    monkeypatch.setattr(app_module, "APP_ACCESS_PIN", "Silver Moon  river Lantern")
+    res = http.post("/api/verify-pin", headers={"x-app-pin": " silver moon river lantern "})
+    assert res.status_code == 200
+    assert http.post("/api/verify-pin", headers={"x-app-pin": "silver moon river"}).status_code == 401
+
+
 def test_verify_pin_open_when_no_pin_configured(http, monkeypatch):
     monkeypatch.setattr(app_module, "APP_ACCESS_PIN", "")
     res = http.post("/api/verify-pin")
