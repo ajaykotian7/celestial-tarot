@@ -185,6 +185,7 @@ def test_chat_plain_reply_with_tldr(http, monkeypatch):
         "reply": "The path is open.",
         "cards": [],
         "spread": None,
+        "kaudi": None,
         "tldr": "Go for it.",
     }
     sent = completions.calls[0]["messages"]
@@ -263,11 +264,11 @@ def draw_call(spread_type="past_present_future", call_id="call_1"):
 def test_new_reading_forces_a_draw_sized_by_the_model(http, monkeypatch, spread_type, count):
     completions = fake_openai(monkeypatch, draw_call(spread_type), completion("Reading."))
 
-    body = chat(http, new_reading=True).json()
+    body = chat(http, new_reading=True, oracle="tarot").json()
 
     first, second = completions.calls
     assert first["tool_choice"] == {"type": "function", "function": {"name": "draw_spread"}}
-    assert app_module.NEW_READING_PROMPT in first["messages"][0]["content"]
+    assert app_module.NEW_READING_PROMPTS["tarot"] in first["messages"][0]["content"]
     assert body["spread"] == spread_type
     assert len(body["cards"]) == count
     assert body["cards"][0]["image"].startswith("/static/cards/")
@@ -288,6 +289,74 @@ def test_follow_up_lets_the_model_answer_without_drawing(http, monkeypatch):
     assert first["tool_choice"] == "auto"
     assert app_module.FOLLOW_UP_PROMPT in first["messages"][0]["content"]
     assert body["cards"] == [] and body["spread"] is None
+
+
+def kaudi_call(call_id="call_1"):
+    return completion(tool_calls=[tool_call(call_id, "cast_kaudi", "{}")])
+
+
+def test_kaudi_oracle_forces_a_cast(http, monkeypatch):
+    completions = fake_openai(monkeypatch, kaudi_call(), completion("The shells speak."))
+
+    body = chat(http, new_reading=True, oracle="kaudi").json()
+
+    first, second = completions.calls
+    assert first["tool_choice"] == {"type": "function", "function": {"name": "cast_kaudi"}}
+    assert app_module.NEW_READING_PROMPTS["kaudi"] in first["messages"][0]["content"]
+    assert [h["position"] for h in body["kaudi"]["heaps"]] == [
+        "What has been", "What is", "What is coming",
+    ]
+    assert body["kaudi"]["leaning"]
+    assert body["cards"] == [] and body["spread"] is None
+    # The model reads the heaps the server cast
+    tool_result = json.loads(second["messages"][-1]["content"])
+    assert tool_result["heaps"] == body["kaudi"]["heaps"]
+
+
+def test_auto_oracle_lets_the_model_choose_one(http, monkeypatch):
+    completions = fake_openai(monkeypatch, draw_call("single_card"), completion("ok"))
+
+    body = chat(http, new_reading=True).json()
+
+    first = completions.calls[0]
+    assert first["tool_choice"] == "required"
+    assert first["parallel_tool_calls"] is False
+    assert {t["function"]["name"] for t in first["tools"]} == {"draw_spread", "cast_kaudi"}
+    assert app_module.NEW_READING_PROMPTS["auto"] in first["messages"][0]["content"]
+    assert len(body["cards"]) == 1 and body["kaudi"] is None
+
+
+@pytest.mark.parametrize(
+    "watched, new_reading, mentioned",
+    [(True, True, True), (False, True, False), (True, False, False)],
+)
+def test_watched_readings_get_one_gentle_line(http, monkeypatch, watched, new_reading, mentioned):
+    responses = [draw_call("single_card"), completion("ok")] if new_reading else [completion("ok")]
+    completions = fake_openai(monkeypatch, *responses)
+    chat(http, new_reading=new_reading, watched=watched)
+    assert (app_module.WATCHED_PROMPT in system_prompt_of(completions)) is mentioned
+
+
+def test_rejects_unknown_oracle(http, monkeypatch):
+    fake_openai(monkeypatch, completion("ok"))
+    assert chat(http, new_reading=True, oracle="ouija").status_code == 422
+
+
+def test_kaudi_journal_entries_reach_the_model(http, monkeypatch):
+    completions = fake_openai(monkeypatch, completion("ok"))
+    reading = {
+        "date": "2026-10-29",
+        "question": "Will the house sell?",
+        "kaudi": [
+            {"position": "What has been", "aya": "Simha", "remainder": 3},
+            {"position": "What is", "aya": "Dhooma", "remainder": 2},
+            {"position": "What is coming", "aya": "Gaja", "remainder": 7},
+        ],
+        "tldr": "Patience, then movement.",
+    }
+    chat(http, recent_readings=[reading])
+    system = system_prompt_of(completions)
+    assert "cast the cowries: what has been Simha (3), what is Dhooma (2)" in system
 
 
 def test_rejects_non_boolean_new_reading(http, monkeypatch):
@@ -348,6 +417,9 @@ def test_profile_traits_reach_the_model_but_birth_details_do_not(http, monkeypat
     assert "Ajay" in system
     assert "Sun in Cancer" in system and "rising" in system
     assert "Birth card: The Hierophant" in system and "Personal year 5" in system
+    assert "Moon rashi Meena" in system and "janma nakshatra Revati pada 4" in system
+    assert "Tula lagna" in system
+    assert "Moolank 6" in system and "Bhagyank 5" in system and "name number 4" in system
     for private in ("1990", "07-15", "14:30", "19.07", "72.88", "Kolkata"):
         assert private not in sent
 
@@ -440,6 +512,20 @@ def test_journal_limits(http, monkeypatch, readings):
 def test_profile_validation(http, monkeypatch, profile):
     fake_openai(monkeypatch, completion("ok"))
     assert chat(http, profile=profile).status_code == 422
+
+
+def test_system_prompt_includes_todays_panchang(http, monkeypatch):
+    completions = fake_openai(monkeypatch, completion("ok"))
+    chat(http, local_date="2026-10-30")
+    system = system_prompt_of(completions)
+    assert "Today's panchang:" in system
+    assert "Shukravara" in system  # 2026-10-30 is a Friday
+
+
+def test_sky_includes_panchang_for_the_local_date(http):
+    today = http.get("/api/sky", params={"local_date": "2026-11-01"}).json()["panchang"]
+    assert today["vara"]["name"] == "Ravivara"
+    assert set(today) >= {"tithi", "nakshatra", "yoga", "karana", "tithi_ends", "nakshatra_ends"}
 
 
 def test_sky_includes_season_and_mercury(http):

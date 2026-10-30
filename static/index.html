@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500;600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500;600&family=Tiro+Devanagari+Sanskrit&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
     <script type="module" src="/static/js/main.js"></script>
@@ -22,15 +22,20 @@
         <div class="mist-layer m1"></div>
         <div class="mist-layer m2"></div>
     </div>
+    <!-- The dark sanctum, lit only by the lamp you carry -->
+    <canvas id="sanctum-canvas" aria-hidden="true"></canvas>
+    <div id="lantern-veil" class="lantern-veil" aria-hidden="true" hidden></div>
+    <!-- The watchers: above the page, so they can't hide behind it -->
+    <canvas id="watchers-canvas" aria-hidden="true" hidden></canvas>
 
     <!-- Full-Page Gatekeeper Blocker Screen -->
     <div id="blocker-screen">
         <div class="gatekeeper-card">
-            <div class="gatekeeper-icon">🔮</div>
-            <h2>Sanctuary Locked</h2>
-            <p>This oracle is protected. Speak the passphrase to commune with the deck.</p>
+            <div class="gatekeeper-icon">🪔</div>
+            <h2>The Sanctum is Sealed</h2>
+            <p>Few have come this far. Speak the passphrase to cross the threshold.</p>
             <input type="password" id="gatekeeper-pin" class="pin-input-field" placeholder="Passphrase" aria-label="Passphrase" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" />
-            <button class="btn-unlock" id="unlock-btn" type="button">ENTER SANCTUARY</button>
+            <button class="btn-unlock" id="unlock-btn" type="button">ENTER THE SANCTUM</button>
             <div id="blocker-error" class="error-msg">Incorrect passphrase.</div>
         </div>
     </div>
@@ -62,8 +67,13 @@
 
     <header>
         <h1>Celestial Tarot</h1>
-        <p id="tagline">Ask your question and let the cards illuminate your path</p>
-        <button id="daily-card-btn" class="daily-card-btn" type="button" hidden>✦ Your card for today</button>
+        <p id="tagline">Carry your lamp closer. The old cards are listening.</p>
+        <div class="header-actions">
+            <button id="panchang-btn" class="daily-card-btn" type="button" aria-label="Today's panchang" hidden>
+                🪔 <span id="panchang-btn-label"></span>
+            </button>
+            <button id="daily-card-btn" class="daily-card-btn" type="button" hidden>✦ Your card for today</button>
+        </div>
     </header>
 
     <main id="main-container">
@@ -87,6 +97,13 @@
 
         <div class="chat-box" id="chat-output" aria-live="polite"></div>
 
+        <!-- Which oracle answers a new question -->
+        <div id="oracle-picker" class="oracle-picker" role="group" aria-label="Choose your oracle">
+            <button type="button" data-oracle="auto" aria-pressed="true">✦ Let the oracle choose</button>
+            <button type="button" data-oracle="tarot" aria-pressed="false">🃏 Cards</button>
+            <button type="button" data-oracle="kaudi" aria-pressed="false">🐚 Kaudi</button>
+        </div>
+
         <div class="input-bar">
             <input type="text" id="user-input" placeholder="Ask the cards..." autocomplete="off" maxlength="1000" />
             <button class="consult-btn" id="send-btn" type="button">CONSULT</button>
@@ -105,6 +122,8 @@
             <p id="ritual-question" class="ritual-question"></p>
             <div class="ritual-stage">
                 <div id="breath-orb" class="breath-orb"></div>
+                <svg id="ritual-sigil" class="sigil" aria-hidden="true" hidden></svg>
+                <button id="ritual-cast" class="ritual-cast" type="button" hidden>🐚 Let the shells fall</button>
                 <div id="cut-deck" class="cut-deck" hidden>
                     <button class="pile card-back-art" type="button" aria-label="Left pile"></button>
                     <button class="pile card-back-art" type="button" aria-label="Middle pile"></button>
@@ -138,8 +157,8 @@
             <h2 id="profile-title">Let the cards know you</h2>
             <p class="panel-sub">
                 Everything here is optional and saved only on this device. Your birth details are used
-                to work out your signs, birth card and numbers. Only those reach the oracle, never the
-                details themselves.
+                to work out your rashi, nakshatra, signs, birth card and numbers. Only those reach the
+                oracle, never the details themselves.
             </p>
             <form id="profile-form" class="profile-form" autocomplete="off">
                 <label class="field">
@@ -157,7 +176,7 @@
                     </label>
                 </div>
                 <div class="field">
-                    <label for="place-input">Birth place <em>(optional: with birth time, reveals your rising sign)</em></label>
+                    <label for="place-input">Birth place <em>(optional: with birth time, reveals your lagna and rising sign)</em></label>
                     <input id="place-input" type="text" placeholder="Search a city…" />
                     <ul id="place-results" class="place-results"></ul>
                     <div id="place-chosen" class="place-chosen" hidden>
@@ -173,6 +192,20 @@
                 </div>
             </form>
             </div>
+        </div>
+    </div>
+
+    <!-- Today's panchang -->
+    <div id="panchang-panel" class="panel-overlay" role="dialog" aria-modal="true" aria-labelledby="panchang-title" hidden>
+        <div class="panel">
+            <button id="panchang-close" class="panel-close" type="button" aria-label="Close">✕</button>
+            <h2 id="panchang-title">Today's panchang <span class="deva" lang="sa">पञ्चाङ्ग</span></h2>
+            <p class="panel-sub">The five limbs of the day, read from the sky as it is right now.</p>
+            <div id="panchang-body" class="panchang-body"></div>
+            <p class="hint">
+                Worked out for this moment with the Lahiri ayanamsa. Traditional calendars fix each
+                day's tithi at sunrise, so for fasts and festivals, follow your family's panchang.
+            </p>
         </div>
     </div>
 

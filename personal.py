@@ -2,11 +2,13 @@
 and a card of the day. Only these derived traits reach the model, never the raw
 birth date, time or place."""
 
+import copy
 import hashlib
 from datetime import date, time
 from typing import Any, Dict, List, Optional
 
 from astrology import birth_chart
+from jyotish import vedic_chart
 from tarot_engine import MAJOR_ARCANA, TAROT_DECK, card_display_name, card_image_path
 
 MASTER_NUMBERS = {11, 22, 33}
@@ -58,6 +60,60 @@ PERSONAL_YEAR_THEMES = {
 }
 
 
+# Indian numerology: the graha that rules each number
+NUMBER_GRAHAS = {
+    1: "Surya (Sun)",
+    2: "Chandra (Moon)",
+    3: "Guru (Jupiter)",
+    4: "Rahu",
+    5: "Budh (Mercury)",
+    6: "Shukra (Venus)",
+    7: "Ketu",
+    8: "Shani (Saturn)",
+    9: "Mangal (Mars)",
+}
+
+# Chaldean letter values (no letter is 9, the sacred number)
+CHALDEAN = {
+    **dict.fromkeys("aijqy", 1),
+    **dict.fromkeys("bkr", 2),
+    **dict.fromkeys("cgls", 3),
+    **dict.fromkeys("dmt", 4),
+    **dict.fromkeys("ehnx", 5),
+    **dict.fromkeys("uvw", 6),
+    **dict.fromkeys("oz", 7),
+    **dict.fromkeys("fp", 8),
+}
+
+# What each number's place in the Lo Shu grid stands for, as read in Indian numerology
+LO_SHU_AREAS = {
+    1: "career and the path ahead",
+    2: "marriage and partnership",
+    3: "family and health",
+    4: "wealth and prosperity",
+    5: "balance and stability",
+    6: "travel and helpful people",
+    7: "children and creativity",
+    8: "knowledge and learning",
+    9: "fame and recognition",
+}
+
+# Complete rows, columns and diagonals of the grid
+#   4 9 2
+#   3 5 7
+#   8 1 6
+LO_SHU_PLANES = [
+    ("Mental plane", (4, 9, 2), "a sharp, thinking mind"),
+    ("Emotional plane", (3, 5, 7), "deep feeling and sensitivity"),
+    ("Practical plane", (8, 1, 6), "a gift for getting things done"),
+    ("Thought plane", (4, 3, 8), "careful planning"),
+    ("Will plane", (9, 5, 1), "determination"),
+    ("Action plane", (2, 7, 6), "turning ideas into action"),
+    ("Golden Raj Yoga", (4, 5, 6), "success and recognition"),
+    ("Silver Raj Yoga", (2, 5, 8), "property and steady wealth"),
+]
+
+
 def digit_sum(n: int) -> int:
     return sum(int(d) for d in str(n))
 
@@ -92,6 +148,56 @@ def birth_cards(birth_date: date) -> List[str]:
     return [MAJOR_ORDER[0 if x == 22 else x] for x in numbers]
 
 
+def moolank(birth_date: date) -> int:
+    """The root (driver) number: the day of birth, reduced to one digit."""
+    return reduce_number(birth_date.day, keep_master=False)
+
+
+def bhagyank(birth_date: date) -> int:
+    """The destiny (conductor) number: every digit of the birth date, reduced."""
+    return reduce_number(digit_sum(int(birth_date.strftime("%d%m%Y"))), keep_master=False)
+
+
+def name_number(name: Optional[str]) -> Optional[Dict[str, Any]]:
+    """Chaldean name number, from the Latin letters of the name, or None."""
+    total = sum(CHALDEAN.get(ch, 0) for ch in (name or "").lower())
+    if not total:
+        return None
+    number = reduce_number(total, keep_master=False)
+    return {"compound": total, "number": number, "graha": NUMBER_GRAHAS[number]}
+
+
+def lo_shu(birth_date: date) -> Dict[str, Any]:
+    """The Lo Shu grid: each non-zero digit of the birth date, plus the Bhagyank,
+    and the Moolank when the day has two digits."""
+    digits = [int(d) for d in birth_date.strftime("%d%m%Y") if d != "0"]
+    digits.append(bhagyank(birth_date))
+    if birth_date.day >= 10:
+        digits.append(moolank(birth_date))
+    counts = [digits.count(n) for n in range(1, 10)]
+    return {
+        # counts[n - 1] is how many times n appears
+        "counts": counts,
+        "missing": [n for n in range(1, 10) if not counts[n - 1]],
+        "planes": [
+            {"name": name, "numbers": list(numbers), "meaning": meaning}
+            for name, numbers, meaning in LO_SHU_PLANES
+            if all(counts[n - 1] for n in numbers)
+        ],
+    }
+
+
+def numerology(birth_date: date, name: Optional[str] = None) -> Dict[str, Any]:
+    root, destiny = moolank(birth_date), bhagyank(birth_date)
+    return {
+        "moolank": {"number": root, "graha": NUMBER_GRAHAS[root]},
+        "bhagyank": {"number": destiny, "graha": NUMBER_GRAHAS[destiny]},
+        "name_number": name_number(name),
+        "lo_shu": lo_shu(birth_date),
+        "lo_shu_areas": LO_SHU_AREAS,
+    }
+
+
 def daily_card(today: date, birth_date: Optional[date] = None) -> Dict[str, Any]:
     """A card for the day, the same all day for the same person."""
     seed = f"{birth_date.isoformat() if birth_date else 'anyone'}|{today.isoformat()}"
@@ -115,8 +221,10 @@ def derive_insights(
     tz_name: Optional[str] = None,
     latitude: Optional[float] = None,
     longitude: Optional[float] = None,
+    name: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
-    """Everything the reading can use from a birth date (plus time and place if given).
+    """Everything the reading can use from a birth date (plus time and place if given,
+    and the name for its Chaldean number).
     personal_cards maps deck keys to why they matter to this querent."""
     if birth_date is None:
         return None
@@ -137,6 +245,8 @@ def derive_insights(
                 f"the card of your {sign['sign']} {placement}"
             )
 
+    vedic = vedic_chart(birth_date, birth_time, tz_name, latitude, longitude)
+
     return {
         "sun": (chart or {}).get("sun"),
         "moon": (chart or {}).get("moon"),
@@ -147,4 +257,8 @@ def derive_insights(
         "personal_year": year,
         "personal_year_theme": PERSONAL_YEAR_THEMES[year],
         "personal_cards": {k: " and ".join(r) for k, r in reasons.items()},
+        # Sidereal (Jyotish): moon rashi, janma nakshatra, sidereal sun and lagna
+        "vedic": copy.deepcopy(vedic),
+        # Moolank, Bhagyank, name number and the Lo Shu grid
+        "numerology": numerology(birth_date, name),
     }

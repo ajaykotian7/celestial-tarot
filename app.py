@@ -16,6 +16,8 @@ from pydantic import BaseModel, Field
 
 from astrology import current_sky
 from celestial import is_witching_hour, moon_phase
+from jyotish import panchang
+from kaudi import cast_kaudi, kaudi_tool
 from personal import daily_card, derive_insights
 from tarot_engine import (
     TAROT_DECK,
@@ -44,7 +46,10 @@ client = AsyncOpenAI(api_key=api_key) if api_key else None
 AVAILABLE_FUNCTIONS = {
     "draw_spread": draw_spread,
     "get_tarot_meaning": get_tarot_meaning,
+    "cast_kaudi": cast_kaudi,
 }
+DRAW_SPREAD_TOOL = next(t for t in tarot_tools if t["function"]["name"] == "draw_spread")
+ALL_TOOLS = [*tarot_tools, kaudi_tool]
 
 # Access PIN configured in .env or Render environment variables
 APP_ACCESS_PIN = os.environ.get("APP_ACCESS_PIN", "").strip()
@@ -90,8 +95,7 @@ SYSTEM_PROMPT = (
 
 EMPTY_REPLY_FALLBACK = "The cards are quiet right now. Please ask your question again."
 
-NEW_READING_PROMPT = (
-    "This is a new question, so draw cards with draw_spread before answering. "
+SPREAD_SIZING = (
     "Size the spread to the question: single_card for a simple or yes/no question, "
     "a three-card spread for a question with some complexity (past_present_future for "
     "how something is unfolding, situation_obstacle_advice for a problem or decision), "
@@ -99,9 +103,41 @@ NEW_READING_PROMPT = (
     "intertwined factors. Interpret every position."
 )
 
+KAUDI_READING = (
+    "Read the three heaps in order (what has been, what is, what is coming), each through "
+    "its aya, then how they lean together. Say the remainder and the aya's name and symbol "
+    "for each heap."
+)
+
+# What to do with a new question, by the oracle the querent chose
+NEW_READING_PROMPTS = {
+    "tarot": "This is a new question, so draw cards with draw_spread before answering. "
+    + SPREAD_SIZING,
+    "kaudi": "This is a new question, so cast the cowries with cast_kaudi before answering. "
+    + KAUDI_READING,
+    "auto": (
+        "This is a new question. Consult one oracle before answering. Cast the cowries "
+        "(cast_kaudi) for a direct question about whether something will happen or how a "
+        "matter will turn out. Draw tarot cards (draw_spread) for questions about feelings, "
+        "relationships, choices, or understanding a situation. For the tarot: "
+        + SPREAD_SIZING
+        + " For the cowries: "
+        + KAUDI_READING
+    ),
+}
+
 FOLLOW_UP_PROMPT = (
-    "The querent is asking a follow-up about cards already drawn in this conversation. "
-    "Answer from those cards. Only draw again if they explicitly ask for a new reading."
+    "The querent is asking a follow-up about the cards or cowries already cast in this "
+    "conversation. Answer from those. Only draw or cast again if they explicitly ask for "
+    "a new reading."
+)
+
+# In the app's story, watchers in the dark try to cloud readings; the querent drives
+# them off with the lamp. If one was still watching when they asked:
+WATCHED_PROMPT = (
+    "Something unseen was watching from the dark as the querent asked this question. "
+    "Near the end, in one gentle sentence, invite them to trust what rings true in this "
+    "reading and let the rest fall away. Keep it calm and kind; never frighten them."
 )
 
 WITCHING_HOUR_PROMPT = (
@@ -136,12 +172,20 @@ class JournalCard(BaseModel):
     position: str = Field(max_length=40)
 
 
+class JournalHeap(BaseModel):
+    position: str = Field(max_length=40)
+    aya: str = Field(max_length=20)
+    remainder: int = Field(ge=1, le=8)
+
+
 class JournalEntry(BaseModel):
-    """A summary of a past reading from the querent's on-device journal."""
+    """A summary of a past reading from the querent's on-device journal: tarot cards,
+    or the three heaps of a kaudi casting."""
 
     date: dt.date
     question: str = Field(max_length=300)
-    cards: List[JournalCard] = Field(max_length=10)
+    cards: List[JournalCard] = Field(default=[], max_length=10)
+    kaudi: List[JournalHeap] = Field(default=[], max_length=3)
     tldr: Optional[str] = Field(default=None, max_length=400)
 
 
@@ -154,9 +198,13 @@ class InsightsRequest(BaseModel):
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=MAX_MESSAGE_CHARS)
     history: List[ChatMessage] = Field(default=[], max_length=MAX_HISTORY_MESSAGES)
-    # True for a fresh question: cards must be drawn, in a spread the model sizes
-    # to the question. False for follow-ups about cards already on the table.
+    # True for a fresh question: cards must be drawn (or cowries cast). False for
+    # follow-ups about what is already on the table.
     new_reading: bool = False
+    # For a new reading: the tarot, the cowries, or let the oracle choose
+    oracle: Literal["auto", "tarot", "kaudi"] = "auto"
+    # A watcher was in the dark, uncaught, when the question was asked
+    watched: bool = False
     # The querent's local hour, used for the witching-hour tone
     local_hour: Optional[int] = Field(default=None, ge=0, le=23)
     local_date: Optional[dt.date] = None
@@ -251,6 +299,7 @@ def insights_for(
             profile.timezone,
             profile.latitude,
             profile.longitude,
+            profile.name,
         )
     except Exception:
         logger.exception("Could not derive profile insights")
@@ -265,6 +314,74 @@ def describe_placement(label: str, placement: Optional[Dict[str, Any]]) -> Optio
     if label == "Rising":
         return f"{placement['sign']} rising ({placement['element']})"
     return f"{label} in {placement['sign']} ({placement['element']})"
+
+
+def describe_vedic(vedic: Optional[Dict[str, Any]]) -> Optional[str]:
+    if not vedic:
+        return None
+    parts = []
+    rashi, nakshatra, sun, lagna = (vedic[k] for k in ("rashi", "nakshatra", "sun", "lagna"))
+    if "alternatives" in rashi:
+        parts.append(f"Moon rashi {' or '.join(rashi['alternatives'])} (birth time unknown)")
+    else:
+        parts.append(f"Moon rashi {rashi['name']}, ruled by {rashi['lord']}")
+    if "alternatives" in nakshatra:
+        parts.append(
+            f"janma nakshatra {' or '.join(nakshatra['alternatives'])} (birth time unknown)"
+        )
+    else:
+        pada = f" pada {nakshatra['pada']}" if "pada" in nakshatra else ""
+        parts.append(
+            f"janma nakshatra {nakshatra['name']}{pada}: deity {nakshatra['deity']}, "
+            f"symbol {nakshatra['symbol']}, ruled by {nakshatra['lord']}, "
+            f"a nakshatra of {nakshatra['theme']}"
+        )
+    if "alternatives" not in sun:
+        parts.append(f"Vedic Sun in {sun['name']}")
+    if lagna:
+        parts.append(f"{lagna['name']} lagna")
+    return (
+        "Their Vedic (sidereal) chart, which many Indian querents know best: "
+        + "; ".join(parts)
+        + "."
+    )
+
+
+def describe_numerology(numbers: Dict[str, Any]) -> str:
+    root, destiny, named = numbers["moolank"], numbers["bhagyank"], numbers["name_number"]
+    text = (
+        f"Indian numerology: Moolank {root['number']} ({root['graha']}), "
+        f"Bhagyank {destiny['number']} ({destiny['graha']})"
+    )
+    if named:
+        text += f", name number {named['number']} ({named['graha']})"
+    grid = numbers["lo_shu"]
+    areas = numbers["lo_shu_areas"]
+    if grid["missing"]:
+        missing = ", ".join(f"{n} ({areas[n]})" for n in grid["missing"])
+        text += f". Missing from their Lo Shu grid: {missing}"
+    if grid["planes"]:
+        text += ". Complete planes: " + ", ".join(p["name"] for p in grid["planes"])
+    return text + "."
+
+
+def panchang_prompt(today: Dict[str, Any]) -> str:
+    tithi, vara, nakshatra = today["tithi"], today["vara"], today["nakshatra"]
+    yoga, karana = today["yoga"], today["karana"]
+    tithi_name = (
+        tithi["name"] if tithi["number"] in (15, 30) else f"{tithi['paksha']} {tithi['name']}"
+    )
+    text = (
+        f"Today's panchang: {tithi_name} tithi, in {tithi['paksha_meaning']}; "
+        f"{vara['name']}, the day of {vara['lord']}; the Moon in {nakshatra['name']} "
+        f"nakshatra ({nakshatra['theme']}); {yoga['name']} yoga ({yoga['meaning']}); "
+        f"{karana['name']} karana."
+    )
+    if tithi["observance"]:
+        text += f" It is {tithi['observance']}."
+    if karana["bhadra"]:
+        text += " Vishti (Bhadra) karana is running, traditionally avoided for new beginnings."
+    return text + " Mention the panchang only where it genuinely illuminates the reading."
 
 
 def profile_prompt(
@@ -290,6 +407,10 @@ def profile_prompt(
             f"Life path number {insights['life_path']}. "
             f"Personal year {insights['personal_year']}: {insights['personal_year_theme']}."
         )
+        vedic = describe_vedic(insights.get("vedic"))
+        if vedic:
+            lines.append(vedic)
+        lines.append(describe_numerology(insights["numerology"]))
         personal = ", ".join(
             f"{card_display_name(key)} ({reason})"
             for key, reason in insights["personal_cards"].items()
@@ -312,12 +433,17 @@ def journal_prompt(entries: List[JournalEntry]) -> Optional[str]:
     lines = []
     counts: Counter = Counter()
     for entry in entries:
-        cards = ", ".join(
-            c.card + (" (reversed)" if c.orientation == "reversed" else "")
-            for c in entry.cards
-        )
+        if entry.kaudi:
+            drew = "cast the cowries: " + ", ".join(
+                f"{h.position.lower()} {h.aya} ({h.remainder})" for h in entry.kaudi
+            )
+        else:
+            drew = "drew " + ", ".join(
+                c.card + (" (reversed)" if c.orientation == "reversed" else "")
+                for c in entry.cards
+            )
         counts.update(c.card for c in entry.cards)
-        line = f'- {entry.date.isoformat()}: "{entry.question}" drew {cards}.'
+        line = f'- {entry.date.isoformat()}: "{entry.question}" {drew}.'
         if entry.tldr:
             line += f" Takeaway: {entry.tldr}"
         lines.append(line)
@@ -341,10 +467,16 @@ def build_system_prompt(
     )
     if sky_now["mercury_retrograde"]:
         sky_text += " Mercury is retrograde, a time of miscommunication, delays and revisiting the past."
-    parts = [SYSTEM_PROMPT, sky_text + " Weave this in briefly where it fits."]
-    parts.append(NEW_READING_PROMPT if payload.new_reading else FOLLOW_UP_PROMPT)
+    parts = [
+        SYSTEM_PROMPT,
+        sky_text + " Weave this in briefly where it fits.",
+        panchang_prompt(panchang(local_date=payload.local_date)),
+    ]
+    parts.append(NEW_READING_PROMPTS[payload.oracle] if payload.new_reading else FOLLOW_UP_PROMPT)
     if is_witching_hour(payload.local_hour):
         parts.append(WITCHING_HOUR_PROMPT)
+    if payload.watched and payload.new_reading:
+        parts.append(WATCHED_PROMPT)
     for extra in (
         profile_prompt(payload.profile, insights),
         journal_prompt(payload.recent_readings),
@@ -384,6 +516,25 @@ def public_insights(insights: Optional[Dict[str, Any]]) -> Optional[Dict[str, An
     }
 
 
+def tool_settings(payload: ChatRequest) -> Dict[str, Any]:
+    """Tools for the first completion. A new question must consult exactly one oracle:
+    the one the querent chose, or (auto) whichever the model judges fits. Follow-ups
+    may use any tool, or none."""
+    if not payload.new_reading:
+        return {"tools": ALL_TOOLS, "tool_choice": "auto"}
+    if payload.oracle == "auto":
+        return {
+            "tools": [DRAW_SPREAD_TOOL, kaudi_tool],
+            "tool_choice": "required",
+            "parallel_tool_calls": False,
+        }
+    name = "cast_kaudi" if payload.oracle == "kaudi" else "draw_spread"
+    return {
+        "tools": ALL_TOOLS,
+        "tool_choice": {"type": "function", "function": {"name": name}},
+    }
+
+
 @app.get("/")
 def serve_index():
     return FileResponse("static/index.html")
@@ -410,9 +561,14 @@ async def verify_pin(request: Request, x_app_pin: Optional[str] = Header(None)):
 
 
 @app.get("/api/sky")
-def sky():
-    """Current moon phase, astrological season and Mercury's motion, shown in the UI."""
-    return {"moon": moon_phase(), **current_sky()}
+def sky(local_date: Optional[dt.date] = None):
+    """Current moon phase, astrological season, Mercury's motion and today's panchang
+    (local_date sets the weekday), shown in the UI."""
+    return {
+        "moon": moon_phase(),
+        **current_sky(),
+        "panchang": panchang(local_date=local_date),
+    }
 
 
 @app.post("/api/insights")
@@ -467,19 +623,14 @@ async def chat_endpoint(
         response = await client.chat.completions.create(
             model=MODEL,
             messages=messages,
-            tools=tarot_tools,
-            # A new question must draw cards; for follow-ups the model decides
-            tool_choice=(
-                {"type": "function", "function": {"name": "draw_spread"}}
-                if payload.new_reading
-                else "auto"
-            ),
+            **tool_settings(payload),
             max_tokens=MAX_COMPLETION_TOKENS,
         )
 
         resp_msg = response.choices[0].message
         drawn_cards_data = []
         drawn_spread = None
+        cast = None
 
         if resp_msg.tool_calls:
             messages.append(resp_msg)
@@ -491,6 +642,8 @@ async def chat_endpoint(
                     mark_personal_cards(tool_res["cards"], querent)
                     drawn_cards_data = tool_res["cards"]
                     drawn_spread = tool_res["spread_type"]
+                elif fn_name == "cast_kaudi" and "heaps" in tool_res:
+                    cast = tool_res
 
                 messages.append(
                     {
@@ -519,6 +672,7 @@ async def chat_endpoint(
             "reply": assistant_reply,
             "cards": drawn_cards_data,
             "spread": drawn_spread,
+            "kaudi": cast and {"heaps": cast["heaps"], "leaning": cast["leaning"]},
             "tldr": tldr_summary,
         }
 

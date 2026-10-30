@@ -1,13 +1,14 @@
+/* The inner sanctum of an old temple: basalt, smoke, bronze and lamplight */
 :root {
-    --bg: #0b0c16;
-    --bg-top: #181b33;
-    --card-bg: #151828;
+    --bg: #070504;
+    --bg-top: #1e130a;
+    --card-bg: #18110b;
     --accent: #d4af37;
     --accent-glow: rgba(212, 175, 55, 0.35);
-    --candle: rgba(255, 170, 70, 0.16);
-    --mist: rgba(140, 130, 200, 0.10);
-    --text: #e6e8f2;
-    --text-muted: #9aa0b8;
+    --candle: rgba(255, 160, 60, 0.18);
+    --mist: rgba(160, 130, 100, 0.09);
+    --text: #ece4d6;
+    --text-muted: #a99d89;
     --danger: #ff6b6b;
     --card-ratio: 400 / 680;
 }
@@ -116,7 +117,13 @@ button {
 #blocker-screen {
     position: fixed;
     inset: 0;
-    background: radial-gradient(circle at center, rgba(27, 30, 56, 0.88) 0%, rgba(6, 7, 13, 0.96) 90%);
+    /* A sealed stone door, lit only where the lamp is held */
+    background: radial-gradient(
+        circle var(--lamp-r, 420px) at var(--lamp-x, 50%) var(--lamp-y, 40%),
+        #2c1b0d 0%,
+        #140c06 50%,
+        #030201 100%
+    );
     display: flex;
     justify-content: center;
     z-index: 99999;
@@ -129,7 +136,7 @@ button {
 .gatekeeper-card {
     /* margin: auto centres it, yet lets the screen scroll when it doesn't fit */
     margin: auto 0;
-    background: rgba(21, 24, 40, 0.96);
+    background: rgba(26, 18, 12, 0.96);
     border: 1px solid var(--accent);
     border-radius: 18px;
     padding: 32px 24px;
@@ -177,7 +184,7 @@ button {
 
 .pin-input-field {
     width: 100%;
-    background: #0d0f1a;
+    background: #120c08;
     border: 1px solid rgba(212, 175, 55, 0.4);
     border-radius: 10px;
     padding: 14px;
@@ -202,7 +209,7 @@ button {
     background: linear-gradient(135deg, #d4af37, #aa8214);
     border: none;
     border-radius: 10px;
-    color: #0b0c16;
+    color: #0c0806;
     font-weight: 700;
     padding: 12px;
     cursor: pointer;
@@ -249,7 +256,7 @@ button {
 }
 
 .pill-btn {
-    background: rgba(21, 24, 40, 0.8);
+    background: rgba(26, 18, 12, 0.8);
     border: 1px solid rgba(212, 175, 55, 0.35);
     color: var(--accent);
     padding: 6px 12px;
@@ -311,11 +318,11 @@ header p {
         radial-gradient(circle at 50% 50%, rgba(212, 175, 55, 0.55) 0 7%, transparent 8%),
         radial-gradient(circle at 50% 50%, transparent 0 17%, rgba(212, 175, 55, 0.4) 18% 19%, transparent 20%),
         repeating-conic-gradient(from 0deg at 50% 50%, rgba(212, 175, 55, 0.14) 0deg 5deg, transparent 5deg 15deg),
-        radial-gradient(circle at 50% 50%, #3a2a66 0%, #120f24 75%);
+        radial-gradient(circle at 50% 50%, #5a1d12 0%, #1a0d08 75%);
     border: 2px solid var(--accent);
     border-radius: 10px;
     box-shadow:
-        inset 0 0 0 4px #120f24,
+        inset 0 0 0 4px #1a0d08,
         inset 0 0 0 5px rgba(212, 175, 55, 0.6),
         0 6px 20px rgba(0, 0, 0, 0.6);
 }
@@ -707,7 +714,7 @@ header p {
 /* --- TL;DR SUMMARY BLOCK --- */
 .tldr-box {
     display: none;
-    background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(21, 24, 40, 0.95));
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(26, 18, 12, 0.95));
     border: 1px solid var(--accent);
     border-left: 4px solid var(--accent);
     border-radius: 12px;
@@ -747,7 +754,7 @@ header p {
 
 /* --- CHAT DISPLAY & INPUT --- */
 .chat-box {
-    background: rgba(21, 24, 40, 0.75);
+    background: rgba(26, 18, 12, 0.75);
     backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 14px;
@@ -806,7 +813,7 @@ button.consult-btn {
     background: linear-gradient(135deg, #d4af37, #aa8214);
     border: none;
     border-radius: 10px;
-    color: #0b0c16;
+    color: #0c0806;
     font-weight: 700;
     padding: 0 18px;
     min-height: 46px;
@@ -840,7 +847,7 @@ button:disabled {
     position: fixed;
     inset: 0;
     z-index: 1000;
-    background: radial-gradient(circle at center, rgba(20, 16, 40, 0.92), rgba(4, 4, 10, 0.97));
+    background: radial-gradient(circle at center, rgba(28, 18, 10, 0.92), rgba(5, 3, 2, 0.97));
     display: flex;
     justify-content: center;
     padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
@@ -874,6 +881,7 @@ button:disabled {
 }
 
 .ritual-stage {
+    position: relative;
     height: 220px;
     display: flex;
     align-items: center;
@@ -906,7 +914,7 @@ button:disabled {
     background: radial-gradient(circle at 40% 35%, rgba(255, 240, 200, 0.9), var(--accent) 45%, rgba(212, 175, 55, 0.1) 72%);
     box-shadow: 0 0 40px var(--accent-glow), 0 0 90px var(--accent-glow);
     transform: scale(0.7);
-    transition: transform 4s ease-in-out, box-shadow 4s ease-in-out;
+    transition: transform 4s ease-in-out, box-shadow 4s ease-in-out, opacity 1.5s ease;
 }
 
 .breath-orb.inhale {
@@ -916,6 +924,23 @@ button:disabled {
 
 .breath-orb.exhale {
     transform: scale(0.7);
+}
+
+/* Behind the sigil while it is carved */
+.breath-orb.dim {
+    opacity: 0.35;
+}
+
+/* Waiting for the oracle to choose */
+.breath-orb.waiting {
+    animation: orbWaiting 2.4s ease-in-out infinite;
+}
+
+@keyframes orbWaiting {
+    50% {
+        opacity: 0.7;
+        box-shadow: 0 0 60px var(--accent-glow), 0 0 120px var(--accent-glow);
+    }
 }
 
 .cut-deck {
@@ -957,7 +982,7 @@ button:disabled {
 
 .pile.chosen {
     box-shadow:
-        inset 0 0 0 4px #120f24,
+        inset 0 0 0 4px #1a0d08,
         inset 0 0 0 5px rgba(212, 175, 55, 0.6),
         0 0 30px var(--accent-glow),
         0 0 60px var(--accent-glow);
@@ -988,7 +1013,7 @@ button:disabled {
     position: fixed;
     inset: 0;
     z-index: 1001;
-    background: rgba(4, 4, 10, 0.88);
+    background: rgba(5, 3, 2, 0.88);
     backdrop-filter: blur(4px);
     display: flex;
     justify-content: center;
@@ -1186,7 +1211,7 @@ button:disabled {
     position: fixed;
     inset: 0;
     z-index: 1000;
-    background: rgba(4, 4, 10, 0.86);
+    background: rgba(5, 3, 2, 0.86);
     backdrop-filter: blur(4px);
     display: flex;
     align-items: flex-start;
@@ -1201,7 +1226,7 @@ button:disabled {
     width: 100%;
     max-width: 520px;
     margin: auto 0;
-    background: rgba(21, 24, 40, 0.97);
+    background: rgba(26, 18, 12, 0.97);
     border: 1px solid var(--accent);
     border-radius: 18px;
     padding: 26px 22px 22px;
@@ -1272,7 +1297,7 @@ button:disabled {
 
 .field input,
 .place-chosen {
-    background: #0d0f1a;
+    background: #120c08;
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 10px;
     padding: 10px 12px;
@@ -1332,7 +1357,7 @@ button:disabled {
 }
 
 .insights {
-    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(21, 24, 40, 0.6));
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(26, 18, 12, 0.6));
     border: 1px solid rgba(212, 175, 55, 0.4);
     border-radius: 12px;
     padding: 12px 14px;
@@ -1405,13 +1430,17 @@ button:disabled {
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
     padding: 12px 14px;
-    background: rgba(11, 12, 22, 0.6);
+    background: rgba(13, 9, 6, 0.6);
 }
 
 .journal-head {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 8px;
+}
+
+.journal-head .journal-date {
+    margin-right: auto;
 }
 
 .journal-date {
@@ -1529,7 +1558,7 @@ button:disabled {
     border-radius: 14px;
     padding: 14px 6px 12px;
     text-align: center;
-    background: radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.14), rgba(11, 12, 22, 0.7) 70%);
+    background: radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.14), rgba(13, 9, 6, 0.7) 70%);
     box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.4), 0 0 18px -8px var(--el);
     color: inherit;
     font-family: inherit;
@@ -1598,9 +1627,19 @@ button:disabled {
 
 .sign-tile.empty {
     border-style: dashed;
-    background: rgba(11, 12, 22, 0.5);
+    background: rgba(13, 9, 6, 0.5);
     box-shadow: none;
+}
+
+/* The empty tile's prompt opens the form */
+.add-details {
+    background: none;
+    border: none;
+    font-family: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
     cursor: pointer;
+    padding: 2px;
 }
 
 .sign-tile.empty .sign-glyph {
@@ -1608,7 +1647,7 @@ button:disabled {
 }
 
 .sign-tile.empty:hover,
-.sign-tile.empty:focus-visible {
+.sign-tile.empty:focus-within {
     border-color: var(--accent);
 }
 
@@ -1685,7 +1724,7 @@ button:disabled {
     border-radius: 14px;
     padding: 14px 10px;
     text-align: center;
-    background: rgba(11, 12, 22, 0.55);
+    background: rgba(13, 9, 6, 0.55);
 }
 
 .number-value {
@@ -1824,12 +1863,12 @@ button:disabled {
     }
 
     .chat-box {
-        background: rgba(21, 24, 40, 0.92);
+        background: rgba(26, 18, 12, 0.92);
     }
 
     .lightbox,
     .panel-overlay {
-        background: rgba(4, 4, 10, 0.94);
+        background: rgba(5, 3, 2, 0.94);
     }
 }
 
@@ -1871,7 +1910,7 @@ button:disabled {
     position: fixed;
     border-radius: 14px;
     box-shadow:
-        0 0 0 9999px rgba(4, 4, 10, 0.8),
+        0 0 0 9999px rgba(5, 3, 2, 0.8),
         0 0 0 2px var(--accent),
         0 0 26px 4px var(--accent-glow);
     pointer-events: none;
@@ -1881,7 +1920,7 @@ button:disabled {
 .tour-bubble {
     position: fixed;
     width: min(330px, calc(100vw - 24px));
-    background: rgba(21, 24, 40, 0.98);
+    background: rgba(26, 18, 12, 0.98);
     border: 1px solid var(--accent);
     border-radius: 14px;
     padding: 14px 16px 16px;
@@ -1902,7 +1941,7 @@ button:disabled {
     left: calc(var(--arrow-x) - 7px);
     width: 12px;
     height: 12px;
-    background: rgba(21, 24, 40, 0.98);
+    background: rgba(26, 18, 12, 0.98);
     border: 1px solid var(--accent);
     transform: rotate(45deg);
 }
@@ -1995,7 +2034,7 @@ button:disabled {
     background: linear-gradient(135deg, #d4af37, #aa8214);
     border: none;
     border-radius: 10px;
-    color: #0b0c16;
+    color: #0c0806;
     font-family: 'Cinzel', serif;
     font-weight: 700;
     letter-spacing: 1px;
@@ -2048,4 +2087,590 @@ button:disabled {
     .tour-bubble {
         transition: none;
     }
+}
+
+/* --- THE SANCTUM: darkness, the lamp you carry, and the veil it lifts --- */
+/* Width and height are set from JS to match the drawing size */
+#sanctum-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Over the page but under panels and the ritual: away from the lamp, even the
+   cards and the reading sink into shadow */
+.lantern-veil {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    pointer-events: none;
+    background: radial-gradient(
+        circle var(--lamp-r, 2000px) at var(--lamp-x, 50%) var(--lamp-y, 40%),
+        transparent 40%,
+        rgba(5, 3, 2, 0.55) 100%
+    );
+    transition: opacity 0.6s ease;
+}
+
+/* On phones the lamp stays where the finger left it, so keep the page readable */
+@media (pointer: coarse) {
+    .lantern-veil {
+        opacity: 0.6;
+    }
+}
+
+/* The watchers' eyes, above the page and its veil but under panels and the ritual */
+#watchers-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 950;
+    pointer-events: none;
+}
+
+.watched-note {
+    list-style: none;
+    text-align: center;
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-style: italic;
+    color: #d98a6a;
+}
+
+/* The guided tour has its own spotlight */
+body:has(.tour) .lantern-veil {
+    opacity: 0;
+}
+
+/* Sanskrit in Devanagari */
+.deva {
+    font-family: 'Tiro Devanagari Sanskrit', 'Noto Serif Devanagari', serif;
+    font-weight: 400;
+    letter-spacing: 0;
+}
+
+.header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.header-actions .daily-card-btn {
+    margin-top: 0;
+}
+
+/* --- SIGIL: the question, carved --- */
+.sigil {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 200px;
+    height: 200px;
+    transform: translate(-50%, -50%);
+    overflow: visible;
+    transition: transform 0.7s ease-in, opacity 0.7s ease-in, filter 4s ease-in-out;
+    filter: drop-shadow(0 0 4px rgba(255, 190, 100, 0.5));
+}
+
+.sigil-ring,
+.sigil-tick {
+    fill: none;
+    stroke: rgba(212, 175, 55, 0.4);
+    stroke-width: 1;
+}
+
+.sigil-grid {
+    stroke: rgba(212, 175, 55, 0.12);
+    stroke-width: 1;
+}
+
+.sigil-line {
+    fill: none;
+    stroke: #ffd58a;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+}
+
+.sigil.carving .sigil-line {
+    animation: sigilCarve 0.5s ease-out forwards;
+}
+
+.sigil.carving .sigil-path {
+    animation-duration: 2.4s;
+    animation-delay: 0.4s;
+}
+
+.sigil.carving .sigil-end {
+    animation-delay: 2.8s;
+}
+
+@keyframes sigilCarve {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+.sigil.lit {
+    filter: drop-shadow(0 0 10px rgba(255, 190, 100, 0.9)) drop-shadow(0 0 24px rgba(212, 120, 40, 0.6));
+}
+
+.sigil.sinking {
+    transform: translate(-50%, -20%) scale(0.5);
+    opacity: 0;
+}
+
+.journal-sigil {
+    width: 30px;
+    height: 30px;
+    flex: none;
+}
+
+.journal-sigil .sigil-line {
+    stroke: var(--accent);
+    stroke-width: 9;
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+}
+
+/* --- TODAY'S PANCHANG --- */
+#panchang-title .deva {
+    color: var(--text-muted);
+    font-size: 0.8em;
+    margin-left: 6px;
+}
+
+.panchang-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.observance {
+    border: 1px solid rgba(212, 175, 55, 0.45);
+    border-radius: 12px;
+    padding: 10px 14px;
+    color: #fff;
+    background: radial-gradient(circle at 0% 50%, rgba(255, 160, 60, 0.16), transparent 70%);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.1rem;
+}
+
+.limb {
+    border-left: 2px solid rgba(212, 175, 55, 0.35);
+    padding: 2px 0 2px 12px;
+}
+
+.limb-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+}
+
+.limb-label {
+    font-size: 0.68rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    min-width: 76px;
+}
+
+.limb-name {
+    font-family: 'Cinzel', serif;
+    color: var(--accent);
+    font-size: 1.05rem;
+}
+
+.limb-deva {
+    color: var(--text-muted);
+}
+
+.limb-detail {
+    color: var(--text);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin-top: 3px;
+}
+
+/* --- VEDIC CHART in the portrait --- */
+.vedic-tile .sign-glyph.deva {
+    font-size: 1.6rem;
+    line-height: 1.45;
+}
+
+.vedic-tile.empty .sign-glyph.deva,
+.vedic-tile.cusp .sign-glyph.deva {
+    opacity: 0.5;
+}
+
+.portrait-tagline.vedic-line {
+    color: var(--accent);
+    font-size: 1.05rem;
+}
+
+.vedic-note {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    color: var(--text);
+    margin-top: 12px;
+}
+
+/* --- CHOOSING THE ORACLE --- */
+.oracle-picker {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+}
+
+.oracle-picker button {
+    background: rgba(26, 18, 12, 0.7);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    color: var(--text-muted);
+    border-radius: 999px;
+    padding: 6px 14px;
+    min-height: 34px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.oracle-picker button[aria-pressed="true"] {
+    color: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 12px var(--accent-glow);
+}
+
+/* --- KAUDI: three heaps of cowries on the cloth --- */
+.cards-tray.layout-kaudi {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    width: 100%;
+}
+
+.kaudi-heap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 6px;
+}
+
+.kaudi-pos {
+    font-family: 'Cinzel', serif;
+    font-size: 0.72rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+/* A worn red cloth, as cowries are cast on */
+.kaudi-cloth {
+    position: relative;
+    width: 100%;
+    max-width: 180px;
+    aspect-ratio: 5 / 4;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(120, 30, 20, 0.55), rgba(60, 14, 10, 0.35) 60%, transparent 72%);
+}
+
+.cowrie {
+    position: absolute;
+    width: 15px;
+    height: 20px;
+    transform: translate(-50%, -50%) rotate(var(--turn));
+    opacity: 0;
+    transition: opacity 0.6s ease, filter 0.6s ease;
+}
+
+.cowrie svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.kaudi-heap.cast .cowrie {
+    animation: cowrieFall 0.45s cubic-bezier(0.3, 0.7, 0.4, 1.2) forwards;
+    animation-delay: calc(var(--i) * 9ms);
+}
+
+@keyframes cowrieFall {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -260%) rotate(calc(var(--turn) - 140deg)) scale(1.3);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) rotate(var(--turn));
+    }
+}
+
+.cowrie-body {
+    fill: #eadcbc;
+    stroke: #9c7d50;
+    stroke-width: 1;
+}
+
+.cowrie-shine {
+    fill: rgba(255, 255, 255, 0.45);
+}
+
+.cowrie-mouth {
+    fill: #3a2414;
+}
+
+.cowrie-tooth {
+    stroke: #eadcbc;
+    stroke-width: 0.9;
+}
+
+.cowrie-spot {
+    fill: #a9875a;
+}
+
+/* Counted away in eights, the rest fade; what remains glows */
+.cowrie.counted {
+    filter: brightness(0.35);
+}
+
+.cowrie.remains {
+    filter: drop-shadow(0 0 4px rgba(255, 200, 110, 0.95));
+}
+
+.kaudi-reading {
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.kaudi-heap.read .kaudi-reading {
+    opacity: 1;
+    transform: none;
+}
+
+.kaudi-count {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.kaudi-aya {
+    font-family: 'Cinzel', serif;
+    font-size: 1.05rem;
+    color: var(--accent);
+    margin-top: 2px;
+}
+
+.kaudi-aya .deva {
+    color: var(--text);
+}
+
+.kaudi-heap.testing .kaudi-aya {
+    color: #d98a6a;
+}
+
+.kaudi-symbol {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.kaudi-meaning {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 0.98rem;
+    line-height: 1.35;
+    color: var(--text);
+    margin-top: 4px;
+}
+
+.kaudi-leaning {
+    list-style: none;
+    text-align: center;
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-style: italic;
+    font-size: 1.15rem;
+    color: #fff;
+}
+
+@media (max-width: 480px) {
+    .cards-tray.layout-kaudi {
+        gap: 6px;
+    }
+
+    .cowrie {
+        width: 11px;
+        height: 15px;
+    }
+
+    .kaudi-meaning {
+        font-size: 0.85rem;
+    }
+}
+
+.ritual-cast {
+    background: radial-gradient(circle, rgba(120, 30, 20, 0.6), rgba(40, 10, 6, 0.4));
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 18px 28px;
+    font-family: 'Cinzel', serif;
+    letter-spacing: 1.5px;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 0 30px var(--accent-glow);
+    transition: transform 0.5s ease, opacity 0.5s ease;
+}
+
+.ritual-cast.released {
+    transform: translateY(30px) scale(0.85);
+    opacity: 0.2;
+}
+
+.journal-aya {
+    font-size: 0.75rem;
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: 999px;
+    padding: 3px 9px;
+    color: var(--accent);
+}
+
+.journal-aya.testing {
+    color: #d98a6a;
+    border-color: rgba(217, 138, 106, 0.4);
+}
+
+/* --- LO SHU GRID in the portrait --- */
+.number-tiles:has(> :nth-child(3)) {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.lo-shu-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.lo-shu-caption {
+    font-family: 'Cinzel', serif;
+    font-size: 0.72rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.lo-shu {
+    display: grid;
+    grid-template-columns: repeat(3, 64px);
+    grid-auto-rows: 56px;
+    border: 1px solid rgba(212, 175, 55, 0.45);
+    box-shadow: 0 0 18px -6px var(--accent-glow);
+}
+
+.lo-shu-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    font-family: 'Cinzel', serif;
+    font-size: 1.05rem;
+    letter-spacing: 1px;
+    color: var(--accent);
+    overflow-wrap: anywhere;
+    text-align: center;
+}
+
+.lo-shu-cell.missing {
+    color: rgba(169, 157, 137, 0.25);
+    font-size: 0.85rem;
+}
+
+/* --- WHILE YOU WERE AWAY --- */
+#tagline.uncanny {
+    animation: uncanny 2.4s ease-out;
+}
+
+@keyframes uncanny {
+    0%, 12%, 20% { opacity: 0; }
+    8%, 16% { opacity: 0.8; }
+    24% { opacity: 0.2; filter: blur(1px); }
+    100% { opacity: 1; filter: none; }
+}
+
+/* `rotate` composes with the card's own transform */
+.nudged {
+    rotate: var(--nudge);
+    transition: rotate 1.2s ease;
+}
+
+/* --- ⓘ INFO BUTTONS AND THEIR POPOVERS --- */
+.info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-left: 2px;
+    vertical-align: 1px;
+    border-radius: 50%;
+    border: 1px solid currentColor;
+    background: none;
+    color: var(--text-muted);
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 0.66rem;
+    letter-spacing: 0;
+    text-transform: none;
+    line-height: 1;
+    cursor: pointer;
+    position: relative;
+}
+
+/* A bigger target for fingers than the little circle */
+.info-btn::after {
+    content: "";
+    position: absolute;
+    inset: -12px;
+}
+
+.info-btn:hover,
+.info-btn:focus-visible,
+.info-btn[aria-expanded="true"] {
+    color: var(--accent);
+}
+
+.info-pop {
+    position: fixed;
+    z-index: 1500;
+    width: min(290px, calc(100vw - 24px));
+    background: rgba(24, 17, 11, 0.98);
+    border: 1px solid rgba(212, 175, 55, 0.5);
+    border-radius: 12px;
+    padding: 12px 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 16px -6px var(--accent-glow);
+    text-align: left;
+}
+
+.info-pop strong {
+    display: block;
+    font-family: 'Cinzel', serif;
+    color: var(--accent);
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+}
+
+.info-pop p {
+    color: var(--text);
+    font-size: 0.84rem;
+    line-height: 1.5;
 }

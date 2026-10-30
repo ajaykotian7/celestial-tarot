@@ -1,6 +1,7 @@
 // The reading journal: past readings saved only in this browser. The last few are
 // summarised for the oracle so it can notice recurring cards and themes.
 import { el, storage } from "./util.js";
+import { createSigil } from "./sigil.js";
 
 const JOURNAL_KEY = "tarot_journal";
 const MAX_ENTRIES = 100;
@@ -29,12 +30,20 @@ export function forget() {
     storage.remove(JOURNAL_KEY);
 }
 
-export function add({ date, question, spread, cards, tldr }) {
+// A tarot reading (cards) or a kaudi casting (kaudi: the three heaps)
+export function add({ date, question, spread, cards = [], kaudi = null, tldr }) {
     const entry = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         date,
         question,
         spread,
+        kaudi: kaudi && kaudi.map(({ position, aya, devanagari, remainder, favourable }) => ({
+            position,
+            aya,
+            devanagari,
+            remainder,
+            favourable,
+        })),
         cards: cards.map(({ position, card, orientation, meaning, image, personal }) => ({
             position,
             card,
@@ -61,10 +70,15 @@ export function recentForOracle() {
         .map((e) => ({
             date: e.date,
             question: clip(e.question, MAX_QUESTION),
-            cards: e.cards.slice(0, 10).map((c) => ({
+            cards: (e.cards || []).slice(0, 10).map((c) => ({
                 card: clip(c.card, MAX_NAME),
                 orientation: c.orientation,
                 position: clip(c.position, MAX_NAME),
+            })),
+            kaudi: (e.kaudi || []).slice(0, 3).map((h) => ({
+                position: clip(h.position, MAX_NAME),
+                aya: h.aya,
+                remainder: h.remainder,
             })),
             tldr: clip(e.tldr, MAX_TLDR),
         }));
@@ -72,7 +86,7 @@ export function recentForOracle() {
 
 function recurringCards(entries) {
     const counts = new Map();
-    for (const e of entries) for (const c of e.cards) counts.set(c.card, (counts.get(c.card) || 0) + 1);
+    for (const e of entries) for (const c of e.cards || []) counts.set(c.card, (counts.get(c.card) || 0) + 1);
     return [...counts.entries()].filter(([, n]) => n > 1).sort((a, b) => b[1] - a[1]);
 }
 
@@ -108,7 +122,9 @@ function render() {
         ...entries.map((entry) => {
             const item = el("li", "journal-entry");
             const head = el("div", "journal-head");
-            head.append(el("span", "journal-date", formatDate(entry.date)));
+            const mark = createSigil(entry.question, { frame: false });
+            mark.setAttribute("class", "journal-sigil");
+            head.append(mark, el("span", "journal-date", formatDate(entry.date)));
             const del = el("button", "journal-delete", "✕");
             del.type = "button";
             del.setAttribute("aria-label", "Delete this reading");
@@ -119,7 +135,13 @@ function render() {
             head.append(del);
 
             const thumbs = el("div", "journal-thumbs");
-            for (const c of entry.cards) {
+            for (const h of entry.kaudi || []) {
+                const chip = el("span", `journal-aya ${h.favourable ? "favourable" : "testing"}`);
+                chip.title = `${h.position}: ${h.remainder} remain`;
+                chip.append(`🐚 ${h.aya}`);
+                thumbs.append(chip);
+            }
+            for (const c of entry.cards || []) {
                 const thumb = el("button", "journal-thumb");
                 thumb.type = "button";
                 thumb.setAttribute("aria-label", `${c.position}: ${c.card}, ${c.orientation}`);

@@ -3,10 +3,14 @@ from datetime import date, time
 import pytest
 
 from personal import (
+    bhagyank,
     birth_cards,
     daily_card,
     derive_insights,
     life_path,
+    lo_shu,
+    moolank,
+    name_number,
     personal_year,
     reduce_number,
 )
@@ -104,3 +108,52 @@ def test_derive_insights_skips_uncertain_sign_cards():
 
 def test_derive_insights_without_birth_date():
     assert derive_insights(None, date(2026, 10, 15)) is None
+
+
+def test_derive_insights_includes_vedic_chart():
+    insights = derive_insights(
+        date(1990, 7, 15), date(2026, 10, 15), time(14, 30), "Asia/Kolkata", 19.07, 72.88
+    )
+    assert insights["vedic"]["rashi"]["name"] == "Meena"
+    assert insights["vedic"]["nakshatra"]["name"] == "Revati"
+    # A copy, so changing it can't leak into the cached chart
+    insights["vedic"]["rashi"]["name"] = "changed"
+    again = derive_insights(
+        date(1990, 7, 15), date(2026, 10, 15), time(14, 30), "Asia/Kolkata", 19.07, 72.88
+    )
+    assert again["vedic"]["rashi"]["name"] == "Meena"
+
+
+@pytest.mark.parametrize(
+    "birth, root, destiny",
+    [(date(1990, 7, 15), 6, 5), (date(1985, 11, 5), 5, 3), (date(1992, 2, 29), 2, 7)],
+)
+def test_moolank_and_bhagyank(birth, root, destiny):
+    assert moolank(birth) == root
+    assert bhagyank(birth) == destiny
+
+
+def test_chaldean_name_number():
+    # A, J, A, Y are all 1 in the Chaldean table
+    assert name_number("Ajay") == {"compound": 4, "number": 4, "graha": "Rahu"}
+    assert name_number("  ") is None
+    assert name_number("अजय") is None  # no Latin letters
+
+
+def test_lo_shu_grid():
+    # 15-07-1990: 1 5 7 1 9 9, plus Bhagyank 5 and Moolank 6 (a two-digit day)
+    grid = lo_shu(date(1990, 7, 15))
+    assert grid["counts"] == [2, 0, 0, 0, 2, 1, 1, 0, 2]
+    assert grid["missing"] == [2, 3, 4, 8]
+    assert [p["name"] for p in grid["planes"]] == ["Will plane"]
+
+
+def test_lo_shu_single_digit_day_adds_no_moolank():
+    # 05-11-1985: 5 1 1 1 9 8 5, plus Bhagyank 3 only
+    assert lo_shu(date(1985, 11, 5))["counts"] == [3, 0, 1, 0, 2, 0, 0, 1, 1]
+
+
+def test_derive_insights_includes_numerology():
+    insights = derive_insights(date(1990, 7, 15), date(2026, 10, 15), name="Ajay")
+    assert insights["numerology"]["moolank"]["number"] == 6
+    assert insights["numerology"]["name_number"]["number"] == 4

@@ -6,29 +6,68 @@ import { runRitual } from "./ritual.js";
 import * as profile from "./profile.js";
 import * as journal from "./journal.js";
 import { runTour } from "./tour.js";
+import { startSanctum } from "./sanctum.js";
+import * as panchang from "./panchang.js";
+import { revealKaudi } from "./kaudi.js";
+import { startOmens } from "./omens.js";
+import * as infotip from "./infotip.js";
 
 // The server only sends the last 6 messages to the model, so don't send more
 const MAX_HISTORY_MESSAGES = 6;
 const WITCHING_HOURS = [0, 1, 2, 3];
-const DEFAULT_PLACEHOLDER = "Ask the cards...";
-const FOLLOW_UP_PLACEHOLDER = "Ask about your cards...";
+const PLACEHOLDERS = { auto: "Ask the oracle...", tarot: "Ask the cards...", kaudi: "Ask the shells..." };
+const FOLLOW_UP_PLACEHOLDER = "Ask more about your reading...";
+const WAITING = {
+    auto: "The oracle listens...",
+    tarot: "Shuffling the deck and channeling guidance...",
+    kaudi: "Gathering the cowries...",
+};
 const INTRO_TEXT =
     'Ask your question, such as: "What energy surrounds my next career move?" ' +
     "The oracle will choose how many cards to draw.";
 
 const TOUR_KEY = "tarot_tour_seen";
+// Bump for a release worth a fresh look: everyone sees the tour once more
+const TOUR_VERSION = "2";
 
 const history = [];
 // While cards are on the table, questions are follow-ups about them (no new draw)
 let cardsOnTable = false;
 let ritualEnabled = storage.get("tarot_ritual") !== "off";
+// Which oracle answers a new question: let it choose, the cards, or the cowries
+let oracle = ["auto", "tarot", "kaudi"].includes(storage.get("tarot_oracle")) ? storage.get("tarot_oracle") : "auto";
 // Derived from the profile by the server: signs, birth card, numbers
 let insights = null;
 let dailyCard = null;
 let insightsReady = Promise.resolve();
+let skyReady = Promise.resolve();
 
 const $ = (id) => document.getElementById(id);
 const sky = startSky($("sky-canvas"));
+// Where the watchers creep: toward the cards on the table, or the question being written
+function readingFocus() {
+    const tray = $("cards-tray");
+    const r = (tray.childElementCount ? tray : $("user-input")).getBoundingClientRect();
+    if (!r.width || r.bottom < 0 || r.top > window.innerHeight) return null;
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+}
+
+// When something watches from the dark, a breath close by; caught in the light, a gasp
+const sanctum = startSanctum($("sanctum-canvas"), $("lantern-veil"), {
+    watchers: $("watchers-canvas"),
+    focus: readingFocus,
+    // Each kind of watcher arrives with its own sound; the temple cat makes none
+    onWatch: ({ kind, pan }) => {
+        if (kind === "ember") sound.ghungroo({ pan, steps: 4, approaching: true });
+        else if (kind === "serpent") sound.hiss({ pan });
+        else if (kind === "pale") sound.breath({ watcher: true, seconds: 2.6, peak: 0.035, pan });
+    },
+    onFlee: ({ kind, pan }) => {
+        if (kind === "ember") sound.ghungroo({ pan, steps: 5, pace: 0.18, peak: 0.35 });
+        sound.gasp();
+    },
+});
+let readingInProgress = false;
 
 // --- GATEKEEPER VALIDATION ---
 
@@ -69,7 +108,7 @@ async function attemptUnlock() {
         showBlockerError("Could not reach oracle server.");
     } finally {
         btn.disabled = false;
-        btn.textContent = "ENTER SANCTUARY";
+        btn.textContent = "ENTER THE SANCTUM";
     }
 }
 
@@ -88,6 +127,10 @@ function unlockUI() {
     setTimeout(() => {
         blocker.style.visibility = "hidden";
         blocker.style.display = "none";
+        sanctum.wake();
+        startOmens(sanctum, {
+            isQuiet: () => !readingInProgress && $("ritual").hidden,
+        });
         $("user-input").focus();
         welcome();
     }, 400);
@@ -100,8 +143,20 @@ function tourSteps() {
     return [
         {
             target: null,
-            title: "Welcome to the sanctuary",
-            text: "A quick look around before your first reading. It takes half a minute.",
+            title: "Welcome to the sanctum",
+            text:
+                "It is dark in here. Your lamp follows your finger or cursor, so carry it wherever " +
+                "you want to see. A quick look around takes half a minute.",
+        },
+        {
+            target: null,
+            title: "Watchers in the dark",
+            text:
+                "Not everything in this sanctum wishes you well. Eyes gather in the dark, drawn to " +
+                "your questions, and creep toward your reading. Carry your light to them (move your " +
+                "cursor, or tap near them) and they flee. Leave them watching when you ask, and they " +
+                "may cloud what the oracle sees. Listen for anklet bells. Not every pair means harm: " +
+                "the temple cat comes and goes as it pleases.",
         },
         {
             target: ".input-bar",
@@ -112,6 +167,13 @@ function tourSteps() {
                 "follow-ups about the same cards, or start a ✦ New reading.",
         },
         {
+            target: "#oracle-picker",
+            title: "Choose your oracle",
+            text:
+                "🃏 Cards are the tarot. 🐚 Kaudi casts cowrie shells into three heaps for what has " +
+                "been, what is, and what is coming. Or let the oracle choose the one your question needs.",
+        },
+        {
             target: "#moon-label",
             title: "Tonight's sky",
             text:
@@ -119,11 +181,18 @@ function tourSteps() {
                 "Mercury is retrograde. After midnight, the witching hour turns the sanctuary red.",
         },
         {
+            target: "#panchang-btn",
+            title: "🪔 Today's panchang",
+            text:
+                "Today's tithi, nakshatra, yoga and karana, read from the real sky. Tap it for the " +
+                "full panchang. The oracle weaves it into your readings.",
+        },
+        {
             target: "#ritual-toggle",
             title: "✦ The ritual",
             text:
-                "Before a reading you'll hold your question, breathe, and cut the deck. Tap here to " +
-                "turn the ritual off and go straight to the cards.",
+                "Before a reading your question is carved into a sigil, then you breathe and cut the " +
+                "deck. Tap here to turn the ritual off and go straight to the cards.",
         },
         {
             target: "#sound-toggle",
@@ -159,16 +228,16 @@ function tourSteps() {
                   target: "#profile-btn",
                   title: "☉ You",
                   text:
-                      "Your signs, birth card and numbers live here, and you can edit them any time. " +
-                      "When one of your cards appears in a reading, it glows.",
+                      "Your rashi, nakshatra, signs, birth card and numbers live here, and you can " +
+                      "edit them any time. When one of your cards appears in a reading, it glows.",
               }
             : {
                   target: "#profile-btn",
                   title: "☉ Let the cards know you",
                   text:
-                      "Share your birth date and the oracle will know your signs and birth card. When " +
-                      "one of your cards appears in a reading, it glows. It's optional and stays on " +
-                      "this device.",
+                      "Share your birth date and the oracle will know your rashi, nakshatra, signs and " +
+                      "birth card. When one of your cards appears in a reading, it glows. It's optional " +
+                      "and stays on this device.",
                   finish: [
                       { label: "Tell the cards about me", action: "profile", primary: true },
                       { label: "Maybe later", action: "done" },
@@ -179,7 +248,7 @@ function tourSteps() {
 
 async function startTour() {
     const result = await runTour(tourSteps());
-    storage.set(TOUR_KEY, "1");
+    storage.set(TOUR_KEY, TOUR_VERSION);
     // The tour ends with the profile invitation, so don't pop the profile up separately
     profile.markPrompted();
     if (result === "profile") profile.openPanel(insights);
@@ -189,9 +258,9 @@ async function startTour() {
 // After unlocking: the guide once (including for people who unlocked before it existed),
 // otherwise the one-time profile invitation
 async function welcome() {
-    if (storage.get(TOUR_KEY) !== "1") {
-        // Give the card of the day a moment to load, so its step can be shown
-        await Promise.race([insightsReady, sleep(1500)]);
+    if (storage.get(TOUR_KEY) !== TOUR_VERSION) {
+        // Give the card of the day and the panchang a moment to load, so their steps can be shown
+        await Promise.race([Promise.all([insightsReady, skyReady]), sleep(1500)]);
         startTour();
     } else if (profile.shouldPrompt()) {
         profile.openPanel(insights);
@@ -208,9 +277,11 @@ function relockSanctuary() {
 
 async function loadSky() {
     try {
-        const res = await fetch("/api/sky");
+        const res = await fetch(`/api/sky?local_date=${profile.localDate()}`);
         if (!res.ok) return;
-        const { moon, season, mercury_retrograde } = await res.json();
+        const { moon, season, mercury_retrograde, panchang: today } = await res.json();
+        panchang.show(today);
+        if (today?.tithi.number === 30) applyAmavasya();
         $("moon-emoji").textContent = moon.emoji;
         $("moon-name").textContent = `${moon.name} · ${season} season`;
         $("moon-label").title = `Tonight's moon: ${moon.name}. The Sun is in ${season}.`;
@@ -244,6 +315,16 @@ function applyWitchingHour() {
     document.body.classList.add("witching");
     $("tagline").textContent = "The witching hour is upon you. The veil is thin…";
     sky.setMood("witching");
+    sanctum.setMood("witching");
+}
+
+// A moonless night: the sanctum grows darker, and more things watch
+function applyAmavasya() {
+    document.body.classList.add("amavasya");
+    sanctum.setDepth("amavasya");
+    if (!document.body.classList.contains("witching")) {
+        $("tagline").textContent = "Amavasya. No moon tonight, and the lamps burn low…";
+    }
 }
 
 function renderToggles() {
@@ -261,7 +342,16 @@ function renderToggles() {
 function setCardsOnTable(value) {
     cardsOnTable = value;
     $("new-reading-btn").hidden = !value;
-    $("user-input").placeholder = value ? FOLLOW_UP_PLACEHOLDER : DEFAULT_PLACEHOLDER;
+    // The oracle is chosen for a new question only
+    $("oracle-picker").hidden = value;
+    $("user-input").placeholder = value ? FOLLOW_UP_PLACEHOLDER : PLACEHOLDERS[oracle];
+}
+
+function renderOracle() {
+    for (const btn of $("oracle-picker").querySelectorAll("button")) {
+        btn.setAttribute("aria-pressed", String(btn.dataset.oracle === oracle));
+    }
+    if (!cardsOnTable) $("user-input").placeholder = PLACEHOLDERS[oracle];
 }
 
 // Clear the table so the next question draws fresh cards
@@ -276,7 +366,7 @@ function startNewReading() {
 
 // --- MAIN TAROT INQUIRY FLOW ---
 
-async function fetchReading(message, newReading) {
+async function fetchReading(message, newReading, watched) {
     const res = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -287,6 +377,8 @@ async function fetchReading(message, newReading) {
             message,
             history,
             new_reading: newReading,
+            oracle,
+            watched,
             local_hour: new Date().getHours(),
             local_date: profile.localDate(),
             profile: profile.toRequest(),
@@ -328,29 +420,33 @@ async function sendInquiry() {
     if (!text) return;
 
     const newReading = !cardsOnTable;
+    readingInProgress = true;
+    // A watcher left in the dark as the question is asked clouds the reading
+    const watched = newReading && sanctum.isWatched();
     btn.disabled = true;
     input.disabled = true;
     tldrBox.style.display = "none";
-    if (newReading) clearSpread($("cards-tray"), $("spread-legend"));
+    if (newReading) {
+        clearSpread($("cards-tray"), $("spread-legend"));
+        sound.startHeartbeat();
+    }
     chat.replaceChildren(
-        el(
-            "span",
-            "status-msg",
-            newReading
-                ? "Shuffling the deck and channeling guidance..."
-                : "The oracle contemplates your cards..."
-        )
+        el("span", "status-msg", newReading ? WAITING[oracle] : "The oracle contemplates your reading...")
     );
+    if (watched) chat.append(el("span", "watched-note", " Something is watching."));
 
     // Start the reading now; the ritual plays while it is on its way
-    const reading = fetchReading(text, newReading).then(
+    const reading = fetchReading(text, newReading, watched).then(
         (data) => ({ data }),
         (error) => ({ error })
     );
 
-    if (newReading && ritualEnabled) await runRitual(text);
+    // Which oracle the reading used, so an "auto" ritual can end with the right gesture
+    const chosen = reading.then(({ data }) => (data?.kaudi ? "kaudi" : data?.cards?.length ? "tarot" : null));
+    if (newReading && ritualEnabled) await runRitual(text, { oracle, chosen });
 
-    const shuffleTimer = newReading ? showShuffler() : null;
+    // The deck is shuffled only when it is known to be the cards
+    const shuffleTimer = newReading && oracle === "tarot" ? showShuffler() : null;
     const { data, error } = await reading;
     hideShuffler(shuffleTimer);
 
@@ -361,6 +457,8 @@ async function sendInquiry() {
             await revealSpread($("cards-tray"), $("spread-legend"), data.cards, data.spread, {
                 onFlip: (i) => {
                     sound.flip();
+                    sound.quickenHeartbeat();
+                    sanctum.flare();
                     if (data.cards[i].personal) {
                         sound.personal();
                         buzz([15, 80, 30]);
@@ -369,6 +467,22 @@ async function sendInquiry() {
                     }
                 },
             });
+        }
+
+        if (data.kaudi) {
+            await revealKaudi($("cards-tray"), $("spread-legend"), data.kaudi, {
+                onCast: () => {
+                    sound.cowries();
+                    sound.quickenHeartbeat(10);
+                    sanctum.flare();
+                    buzz([10, 40, 10]);
+                },
+                onCount: sound.tick,
+            });
+        }
+        sound.stopHeartbeat();
+        if (watched) {
+            $("spread-legend").append(el("li", "watched-note", "👁 Something watched this reading. Trust what rings true."));
         }
 
         if (data.tldr) {
@@ -389,12 +503,13 @@ async function sendInquiry() {
             history.splice(0, history.length - MAX_HISTORY_MESSAGES);
         }
 
-        if (data.cards && data.cards.length > 0) {
+        if (data.cards?.length || data.kaudi) {
             journal.add({
                 date: profile.localDate(),
                 question: text,
                 spread: data.spread,
-                cards: data.cards,
+                cards: data.cards || [],
+                kaudi: data.kaudi?.heaps || null,
                 tldr: data.tldr,
             });
             setCardsOnTable(true);
@@ -402,12 +517,59 @@ async function sendInquiry() {
     } catch (err) {
         chat.replaceChildren(el("span", "error-text", `Oracle disrupted: ${err.message}`));
     } finally {
+        readingInProgress = false;
+        sound.stopHeartbeat();
         btn.disabled = false;
         input.disabled = false;
         input.value = "";
         input.focus();
     }
 }
+
+// --- WHILE YOU WERE AWAY ---
+// Leave the tab for a while and come back: the lamp has guttered, a line has changed,
+// and if cards are on the table, one of them has moved.
+
+const AWAY_SECONDS = 20;
+const AWAY_LINES = [
+    "You left. The cards didn't.",
+    "Something turned in the dark while you were gone.",
+    "The lamp burned lower while you were away.",
+    "We kept your place. Something else sat in it for a while.",
+    "You were missed. Not only by us.",
+    "The shells shifted while no one was looking.",
+];
+let awayAt = null;
+
+function onReturn() {
+    // Not while the sanctum is still sealed
+    if ($("blocker-screen").style.display !== "none") return;
+    const tagline = $("tagline");
+    const lines = AWAY_LINES.filter((l) => l !== tagline.textContent);
+    tagline.textContent = lines[Math.floor(Math.random() * lines.length)];
+    tagline.classList.remove("uncanny");
+    void tagline.offsetWidth; // restart the flicker
+    tagline.classList.add("uncanny");
+
+    const cards = [...document.querySelectorAll("#cards-tray .tarot-card, #cards-tray .kaudi-heap")];
+    if (cards.length) {
+        const moved = cards[Math.floor(Math.random() * cards.length)];
+        moved.style.setProperty("--nudge", `${(Math.random() < 0.5 ? -1 : 1) * (1 + Math.random())}deg`);
+        moved.classList.add("nudged");
+    }
+    sanctum.relight();
+    sound.breath({ inhale: true, seconds: 2.4, peak: 0.05 });
+}
+
+document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+        awayAt = Date.now();
+    } else if (awayAt && Date.now() - awayAt > AWAY_SECONDS * 1000) {
+        awayAt = null;
+        // After the audio context resumes
+        setTimeout(onReturn, 300);
+    }
+});
 
 // --- WIRING ---
 
@@ -420,6 +582,8 @@ $("send-btn").addEventListener("click", sendInquiry);
 $("user-input").addEventListener("keypress", (e) => {
     if (e.key === "Enter") sendInquiry();
 });
+// Writing a question draws the watchers
+$("user-input").addEventListener("input", () => sanctum.beckon());
 
 $("sound-toggle").addEventListener("click", () => {
     sound.setEnabled(!sound.isEnabled());
@@ -431,14 +595,24 @@ $("ritual-toggle").addEventListener("click", () => {
     renderToggles();
 });
 $("new-reading-btn").addEventListener("click", startNewReading);
+$("oracle-picker").addEventListener("click", (e) => {
+    const choice = e.target.closest("button")?.dataset.oracle;
+    if (!choice) return;
+    oracle = choice;
+    storage.set("tarot_oracle", oracle);
+    renderOracle();
+});
 
 $("lightbox").addEventListener("click", closeLightbox);
 document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
-    // Close the topmost layer only: the card view can sit above the journal
+    // Close the topmost layer only: an info popover, then the card view (which can sit
+    // above the journal), then panels
+    if (infotip.close()) return;
     if (closeLightbox()) return;
     profile.closePanel();
     journal.closePanel();
+    panchang.closePanel();
 });
 
 $("profile-btn").addEventListener("click", () => profile.openPanel(insights));
@@ -465,15 +639,17 @@ profile.initPanel({
     },
 });
 journal.initPanel({ onCardClick: openLightbox });
+panchang.initPanel();
 
 // Browsers only allow audio after a user gesture
 document.addEventListener("pointerdown", sound.onUserGesture, { once: true });
 document.addEventListener("keydown", sound.onUserGesture, { once: true });
 
 renderToggles();
+renderOracle();
 startNewReading();
 applyWitchingHour();
-loadSky();
+skyReady = loadSky();
 insightsReady = loadInsights();
 
 (async () => {

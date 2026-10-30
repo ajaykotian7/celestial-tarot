@@ -11,7 +11,7 @@ import math
 from datetime import date, datetime, time, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from skyfield.api import load, load_file
@@ -95,18 +95,12 @@ def _sign_over(body: str, start: datetime, end: datetime) -> Dict[str, Any]:
     return _placement(sign_of(ecliptic_longitude(body, middle)), [first, last])
 
 
-def birth_chart(
-    birth_date: date,
-    birth_time: Optional[time] = None,
-    tz_name: Optional[str] = None,
-    latitude: Optional[float] = None,
-    longitude: Optional[float] = None,
-) -> Optional[Dict[str, Any]]:
-    """Sun, Moon and rising signs. Rising needs birth time and place; without an
-    exact time, a sign that changes during the birth day comes back as uncertain."""
-    if not EPHEMERIS_FIRST_DAY <= birth_date <= EPHEMERIS_LAST_DAY:
-        return None
-
+def birth_moment(
+    birth_date: date, birth_time: Optional[time] = None, tz_name: Optional[str] = None
+) -> Tuple[Optional[datetime], datetime, datetime]:
+    """(exact instant or None, window start, window end) for a birth. Without a time,
+    the window covers the birth day in its zone, or everywhere on Earth if the zone
+    is unknown."""
     zone = None
     if tz_name:
         try:
@@ -116,6 +110,35 @@ def birth_chart(
 
     if birth_time is not None and zone is not None:
         instant = datetime.combine(birth_date, birth_time, tzinfo=zone)
+        return instant, instant, instant
+
+    if zone is not None:
+        start = datetime.combine(birth_date, time.min, tzinfo=zone)
+        return None, start, start + timedelta(days=1)
+
+    # Unknown time zone: UTC-12 to UTC+14
+    midnight_utc = datetime.combine(birth_date, time.min, tzinfo=timezone.utc)
+    return None, midnight_utc - timedelta(hours=14), midnight_utc + timedelta(hours=36)
+
+
+def in_ephemeris(day: date) -> bool:
+    return EPHEMERIS_FIRST_DAY <= day <= EPHEMERIS_LAST_DAY
+
+
+def birth_chart(
+    birth_date: date,
+    birth_time: Optional[time] = None,
+    tz_name: Optional[str] = None,
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
+) -> Optional[Dict[str, Any]]:
+    """Sun, Moon and rising signs. Rising needs birth time and place; without an
+    exact time, a sign that changes during the birth day comes back as uncertain."""
+    if not in_ephemeris(birth_date):
+        return None
+
+    instant, start, end = birth_moment(birth_date, birth_time, tz_name)
+    if instant is not None:
         rising = None
         if latitude is not None and longitude is not None:
             rising = _placement(sign_of(ascendant(instant, latitude, longitude)))
@@ -124,15 +147,6 @@ def birth_chart(
             "moon": _placement(sign_of(ecliptic_longitude("moon", instant))),
             "rising": rising,
         }
-
-    if zone is not None:
-        start = datetime.combine(birth_date, time.min, tzinfo=zone)
-        end = start + timedelta(days=1)
-    else:
-        # Unknown time zone: cover the birth date everywhere on Earth (UTC-12 to UTC+14)
-        midnight_utc = datetime.combine(birth_date, time.min, tzinfo=timezone.utc)
-        start = midnight_utc - timedelta(hours=14)
-        end = midnight_utc + timedelta(hours=36)
 
     return {
         "sun": _sign_over("sun", start, end),

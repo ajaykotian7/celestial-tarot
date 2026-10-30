@@ -1,6 +1,5 @@
-import json
 import random
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 
 MAJOR_ARCANA = {
     "the fool": {
