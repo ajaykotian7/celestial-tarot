@@ -2674,3 +2674,434 @@ body:has(.tour) .lantern-veil {
     font-size: 0.84rem;
     line-height: 1.5;
 }
+
+/* --- JATAKA: the South Indian chart, carved in bronze on basalt --- */
+.south-chart {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: repeat(4, minmax(0, 1fr));
+    aspect-ratio: 1;
+    width: min(100%, 440px);
+    margin: 0 auto;
+    border: 1px solid var(--accent);
+    background: rgba(18, 12, 8, 0.9);
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.7), 0 0 14px var(--accent-glow);
+}
+
+.chart-house {
+    position: relative;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    padding: 5px 5px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 2px 6px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* The lagna's box is marked with a stroke across its corner, as on a printed chart */
+.chart-house.lagna::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 26%;
+    height: 26%;
+    background: linear-gradient(to bottom right, transparent calc(50% - 1px), var(--accent) 50%, transparent calc(50% + 1px));
+    pointer-events: none;
+}
+
+.chart-house.lagna {
+    background: rgba(212, 175, 55, 0.06);
+}
+
+.chart-graha {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: clamp(0.66rem, 2.6vw, 0.86rem);
+    color: var(--text);
+    white-space: nowrap;
+    transition: opacity 0.5s ease, transform 0.5s ease, color 0.3s;
+}
+
+.chart-graha.chart-lagna {
+    color: var(--accent);
+    font-style: italic;
+    margin-left: 22%;
+}
+
+.chart-graha sup {
+    font-size: 0.6em;
+    color: #d98a6a;
+    margin-left: 1px;
+}
+
+.chart-degree {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    font-size: 0.72em;
+    color: var(--text-muted);
+    margin-left: 2px;
+}
+
+/* The lords of the running dasha */
+.chart-graha.lord {
+    color: var(--accent);
+    text-shadow: 0 0 10px var(--accent-glow), 0 0 4px rgba(255, 190, 90, 0.6);
+}
+
+.chart-graha.pending {
+    opacity: 0;
+    transform: scale(0.4);
+}
+
+.chart-sign {
+    position: absolute;
+    right: 5px;
+    bottom: 3px;
+    font-size: clamp(0.5rem, 2vw, 0.62rem);
+    color: var(--text-muted);
+    opacity: 0.65;
+    letter-spacing: 0.5px;
+}
+
+.chart-centre {
+    grid-row: 2 / 4;
+    grid-column: 2 / 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    text-align: center;
+    padding: 8px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.08), transparent 70%);
+}
+
+.chart-title {
+    font-family: 'Cinzel', serif;
+    color: var(--accent);
+    letter-spacing: 2px;
+    font-size: clamp(0.85rem, 3.4vw, 1.1rem);
+}
+
+.chart-deva {
+    color: var(--accent);
+    font-size: clamp(0.9rem, 3.4vw, 1.15rem);
+    opacity: 0.8;
+}
+
+.chart-caption {
+    color: var(--text-muted);
+    font-size: clamp(0.62rem, 2.4vw, 0.78rem);
+}
+
+.cards-tray.layout-jataka {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.jataka-legend {
+    list-style: none;
+    text-align: center;
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-style: italic;
+    font-size: 1.1rem;
+    color: #fff;
+}
+
+/* --- The jataka panel --- */
+.jataka-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.jataka-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.chart-section {
+    align-items: center;
+}
+
+.varga-toggle {
+    margin-bottom: 4px;
+}
+
+.chart-key {
+    text-align: center;
+}
+
+.jataka-heading {
+    font-family: 'Cinzel', serif;
+    color: var(--accent);
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+    font-weight: 500;
+    margin-top: 16px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.jataka-heading .deva {
+    font-size: 0.9em;
+    opacity: 0.75;
+    margin-left: 4px;
+}
+
+.jataka-line {
+    color: var(--text);
+    font-size: 0.86rem;
+    line-height: 1.5;
+}
+
+.table-scroll {
+    overflow-x: auto;
+}
+
+.graha-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+}
+
+.graha-table th {
+    font-family: 'Cinzel', serif;
+    font-weight: 500;
+    color: var(--accent);
+    font-size: 0.68rem;
+    letter-spacing: 0.5px;
+    text-align: left;
+    padding: 4px 6px;
+}
+
+.graha-table td {
+    padding: 5px 6px;
+    border-top: 1px solid rgba(212, 175, 55, 0.12);
+    white-space: nowrap;
+}
+
+.graha-table .lagna-row td {
+    color: var(--accent);
+}
+
+.graha-deva {
+    color: var(--text-muted);
+    font-size: 0.9em;
+}
+
+.graha-notes {
+    color: var(--text-muted);
+    white-space: normal;
+}
+
+.dasha-now {
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.dasha-now-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 0.85rem;
+}
+
+.dasha-level {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    width: 84px;
+    flex-shrink: 0;
+}
+
+.dasha-lord {
+    font-family: 'Cinzel', serif;
+    color: var(--accent);
+}
+
+.dasha-until,
+.dasha-span {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    margin-left: auto;
+}
+
+.dasha-md {
+    border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+}
+
+.dasha-md summary {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 7px 2px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.dasha-md.past summary .dasha-lord {
+    color: var(--text-muted);
+}
+
+.dasha-md.current summary .dasha-lord {
+    text-shadow: 0 0 10px var(--accent-glow);
+}
+
+.dasha-ads {
+    list-style: none;
+    padding: 0 2px 8px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 0.78rem;
+}
+
+.dasha-ads li {
+    display: flex;
+    gap: 8px;
+}
+
+.dasha-ads li.past {
+    color: var(--text-muted);
+}
+
+.dasha-ads li.current {
+    color: var(--accent);
+}
+
+.chip.now {
+    box-shadow: 0 0 10px var(--accent-glow);
+    border-color: var(--accent);
+}
+
+.chip.past {
+    color: var(--text-muted);
+    border-color: rgba(169, 157, 137, 0.35);
+}
+
+.period-list {
+    margin-top: 4px;
+}
+
+.gochar-list,
+.yoga-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.84rem;
+    line-height: 1.45;
+}
+
+.dosha-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dosha {
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.dosha.present {
+    border-color: rgba(217, 138, 106, 0.55);
+}
+
+.dosha.absent {
+    opacity: 0.8;
+}
+
+.dosha-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.dosha-head .deva {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.dosha-name {
+    font-family: 'Cinzel', serif;
+    color: var(--accent);
+    font-size: 0.88rem;
+}
+
+.dosha-status {
+    margin-left: auto;
+    font-size: 0.7rem;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    padding: 1px 8px;
+}
+
+.status-present {
+    color: #e08a6a;
+}
+
+.status-mild {
+    color: #d9b36a;
+}
+
+.status-cancelled {
+    color: #9cc49a;
+}
+
+.status-absent {
+    color: var(--text-muted);
+}
+
+.dosha-detail {
+    font-size: 0.84rem;
+    line-height: 1.45;
+}
+
+.dosha-cancel {
+    font-size: 0.8rem;
+    color: #9cc49a;
+}
+
+.dosha-absent summary {
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    padding: 8px 2px;
+}
+
+.jataka-conventions {
+    margin-top: 14px;
+}
+
+@media (max-width: 420px) {
+    .chart-house {
+        padding: 3px 3px 12px;
+        gap: 1px 4px;
+    }
+
+    .dasha-level {
+        width: 72px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .chart-graha {
+        transition: none;
+    }
+}

@@ -10,6 +10,7 @@ const SENT_TO_ORACLE = 5;
 const MAX_QUESTION = 300;
 const MAX_TLDR = 400;
 const MAX_NAME = 40;
+const MAX_DASHA = 60;
 
 const $ = (id) => document.getElementById(id);
 
@@ -30,8 +31,9 @@ export function forget() {
     storage.remove(JOURNAL_KEY);
 }
 
-// A tarot reading (cards) or a kaudi casting (kaudi: the three heaps)
-export function add({ date, question, spread, cards = [], kaudi = null, tldr }) {
+// A tarot reading (cards), a kaudi casting (kaudi: the three heaps), or a jataka
+// reading (jataka: the dasha it was read in, e.g. "Chandra–Budh")
+export function add({ date, question, spread, cards = [], kaudi = null, jataka = null, tldr }) {
     const entry = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         date,
@@ -52,6 +54,7 @@ export function add({ date, question, spread, cards = [], kaudi = null, tldr }) 
             image,
             personal,
         })),
+        jataka: jataka || null,
         tldr: tldr || null,
     };
     save([entry, ...load()]);
@@ -80,6 +83,7 @@ export function recentForOracle() {
                 aya: h.aya,
                 remainder: h.remainder,
             })),
+            jataka: clip(e.jataka, MAX_DASHA) || null,
             tldr: clip(e.tldr, MAX_TLDR),
         }));
 }
@@ -135,6 +139,7 @@ function render() {
             head.append(del);
 
             const thumbs = el("div", "journal-thumbs");
+            if (entry.jataka) thumbs.append(el("span", "journal-aya", `🪐 ${entry.jataka} dasha`));
             for (const h of entry.kaudi || []) {
                 const chip = el("span", `journal-aya ${h.favourable ? "favourable" : "testing"}`);
                 chip.title = `${h.position}: ${h.remainder} remain`;

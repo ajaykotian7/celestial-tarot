@@ -9,18 +9,26 @@ import { runTour } from "./tour.js";
 import { startSanctum } from "./sanctum.js";
 import * as panchang from "./panchang.js";
 import { revealKaudi } from "./kaudi.js";
+import * as jataka from "./jataka.js";
 import { startOmens } from "./omens.js";
 import * as infotip from "./infotip.js";
 
 // The server only sends the last 6 messages to the model, so don't send more
 const MAX_HISTORY_MESSAGES = 6;
 const WITCHING_HOURS = [0, 1, 2, 3];
-const PLACEHOLDERS = { auto: "Ask the oracle...", tarot: "Ask the cards...", kaudi: "Ask the shells..." };
+const ORACLES = ["auto", "tarot", "kaudi", "jataka"];
+const PLACEHOLDERS = {
+    auto: "Ask the oracle...",
+    tarot: "Ask the cards...",
+    kaudi: "Ask the shells...",
+    jataka: "Ask the grahas...",
+};
 const FOLLOW_UP_PLACEHOLDER = "Ask more about your reading...";
 const WAITING = {
     auto: "The oracle listens...",
     tarot: "Shuffling the deck and channeling guidance...",
     kaudi: "Gathering the cowries...",
+    jataka: "The grahas take their places...",
 };
 const INTRO_TEXT =
     'Ask your question, such as: "What energy surrounds my next career move?" ' +
@@ -28,14 +36,14 @@ const INTRO_TEXT =
 
 const TOUR_KEY = "tarot_tour_seen";
 // Bump for a release worth a fresh look: everyone sees the tour once more
-const TOUR_VERSION = "2";
+const TOUR_VERSION = "3";
 
 const history = [];
 // While cards are on the table, questions are follow-ups about them (no new draw)
 let cardsOnTable = false;
 let ritualEnabled = storage.get("tarot_ritual") !== "off";
-// Which oracle answers a new question: let it choose, the cards, or the cowries
-let oracle = ["auto", "tarot", "kaudi"].includes(storage.get("tarot_oracle")) ? storage.get("tarot_oracle") : "auto";
+// Which oracle answers a new question: let it choose, the cards, the cowries or the jataka
+let oracle = ORACLES.includes(storage.get("tarot_oracle")) ? storage.get("tarot_oracle") : "auto";
 // Derived from the profile by the server: signs, birth card, numbers
 let insights = null;
 let dailyCard = null;
@@ -171,7 +179,8 @@ function tourSteps() {
             title: "Choose your oracle",
             text:
                 "🃏 Cards are the tarot. 🐚 Kaudi casts cowrie shells into three heaps for what has " +
-                "been, what is, and what is coming. Or let the oracle choose the one your question needs.",
+                "been, what is, and what is coming. 🪐 Jataka answers from your own birth chart: the " +
+                "dasha you are in and the grahas moving over it. Or let the oracle choose.",
         },
         {
             target: "#moon-label",
@@ -215,6 +224,13 @@ function tourSteps() {
             target: "#daily-card-btn",
             title: "Your card for today",
             text: "A card drawn just for you. It stays the same all day and changes at midnight.",
+        },
+        {
+            target: "#jataka-btn",
+            title: "🪐 Your jataka",
+            text:
+                "With your birth time and place, your chart is drawn here in the South Indian style, " +
+                "with your dashas, Sade Sati, gochar, doshas and yogas.",
         },
         {
             target: "#journal-btn",
@@ -305,6 +321,7 @@ async function loadInsights() {
         insights = data.insights;
         dailyCard = data.daily_card;
         $("daily-card-btn").hidden = !dailyCard;
+        $("jataka-btn").hidden = false;
     } catch {
         /* the profile panel just won't show derived insights */
     }
@@ -411,6 +428,16 @@ function hideShuffler(timer) {
     $("shuffler").style.display = "none";
 }
 
+// The jataka oracle needs a chart; offer to add the birth time and place instead
+function askForBirthDetails() {
+    const add = el("button", "btn-link", "Add your birth time and place");
+    add.type = "button";
+    add.addEventListener("click", () => profile.openPanel(insights, { edit: true }));
+    const note = el("p", null, "Your jataka needs your birth time and birth place. ");
+    note.append(add);
+    $("chat-output").replaceChildren(note);
+}
+
 async function sendInquiry() {
     const input = $("user-input");
     const btn = $("send-btn");
@@ -420,6 +447,13 @@ async function sendInquiry() {
     if (!text) return;
 
     const newReading = !cardsOnTable;
+    if (newReading && oracle === "jataka") {
+        await insightsReady;
+        if (!insights?.jataka) {
+            askForBirthDetails();
+            return;
+        }
+    }
     readingInProgress = true;
     // A watcher left in the dark as the question is asked clouds the reading
     const watched = newReading && sanctum.isWatched();
@@ -442,7 +476,9 @@ async function sendInquiry() {
     );
 
     // Which oracle the reading used, so an "auto" ritual can end with the right gesture
-    const chosen = reading.then(({ data }) => (data?.kaudi ? "kaudi" : data?.cards?.length ? "tarot" : null));
+    const chosen = reading.then(({ data }) =>
+        data?.kaudi ? "kaudi" : data?.cards?.length ? "tarot" : data?.jataka ? "jataka" : null
+    );
     if (newReading && ritualEnabled) await runRitual(text, { oracle, chosen });
 
     // The deck is shuffled only when it is known to be the cards
@@ -480,6 +516,11 @@ async function sendInquiry() {
                 onCount: sound.tick,
             });
         }
+        // A new jataka reading puts the chart on the table (a follow-up leaves the table be)
+        const readJataka = newReading && data.jataka && insights?.jataka;
+        if (readJataka) {
+            await revealJatakaChart(data.jataka);
+        }
         sound.stopHeartbeat();
         if (watched) {
             $("spread-legend").append(el("li", "watched-note", "👁 Something watched this reading. Trust what rings true."));
@@ -503,13 +544,14 @@ async function sendInquiry() {
             history.splice(0, history.length - MAX_HISTORY_MESSAGES);
         }
 
-        if (data.cards?.length || data.kaudi) {
+        if (data.cards?.length || data.kaudi || readJataka) {
             journal.add({
                 date: profile.localDate(),
                 question: text,
                 spread: data.spread,
                 cards: data.cards || [],
                 kaudi: data.kaudi?.heaps || null,
+                jataka: readJataka ? [data.jataka.mahadasha, data.jataka.antardasha].join("–") : null,
                 tldr: data.tldr,
             });
             setCardsOnTable(true);
@@ -524,6 +566,16 @@ async function sendInquiry() {
         input.value = "";
         input.focus();
     }
+}
+
+function revealJatakaChart(dasha) {
+    return jataka.revealJataka($("cards-tray"), $("spread-legend"), insights.jataka, dasha, {
+        onPlace: () => {
+            sound.tick();
+            sound.quickenHeartbeat(4);
+            buzz(8);
+        },
+    }).then(() => sanctum.flare());
 }
 
 // --- WHILE YOU WERE AWAY ---
@@ -551,7 +603,7 @@ function onReturn() {
     void tagline.offsetWidth; // restart the flicker
     tagline.classList.add("uncanny");
 
-    const cards = [...document.querySelectorAll("#cards-tray .tarot-card, #cards-tray .kaudi-heap")];
+    const cards = [...document.querySelectorAll("#cards-tray .tarot-card, #cards-tray .kaudi-heap, #cards-tray .south-chart")];
     if (cards.length) {
         const moved = cards[Math.floor(Math.random() * cards.length)];
         moved.style.setProperty("--nudge", `${(Math.random() < 0.5 ? -1 : 1) * (1 + Math.random())}deg`);
@@ -613,10 +665,19 @@ document.addEventListener("keydown", (e) => {
     profile.closePanel();
     journal.closePanel();
     panchang.closePanel();
+    jataka.closePanel();
 });
 
 $("profile-btn").addEventListener("click", () => profile.openPanel(insights));
 $("journal-btn").addEventListener("click", journal.openPanel);
+$("jataka-btn").addEventListener("click", () =>
+    jataka.openPanel(insights?.jataka || null, {
+        onAddDetails: () => {
+            jataka.closePanel();
+            profile.openPanel(insights, { edit: true });
+        },
+    })
+);
 $("tour-btn").addEventListener("click", startTour);
 $("daily-card-btn").addEventListener("click", () => dailyCard && openLightbox(dailyCard));
 
@@ -640,6 +701,7 @@ profile.initPanel({
 });
 journal.initPanel({ onCardClick: openLightbox });
 panchang.initPanel();
+jataka.initPanel();
 
 // Browsers only allow audio after a user gesture
 document.addEventListener("pointerdown", sound.onUserGesture, { once: true });

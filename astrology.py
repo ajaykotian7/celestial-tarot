@@ -1,8 +1,9 @@
 """Western (tropical) astrology from NASA JPL ephemeris data, via Skyfield.
 
-data/de440s-excerpt.bsp is an excerpt of JPL's DE440s covering only the Sun, Moon,
-Earth and Mercury from 1900 to 2100, made with:
-    python -m jplephem excerpt --targets 1,3,10,301,399 1900/01/01 2100/01/01 \
+data/de440s-excerpt.bsp is an excerpt of JPL's DE440s covering the Sun, Moon, Earth,
+Mercury, Venus, Mars, Jupiter and Saturn (the last four as barycenters, which is
+plenty for astrology) from 1900 to 2100, made with:
+    python -m jplephem excerpt --targets 1,2,3,4,5,6,10,301,399 1900/01/01 2100/01/01 \
         https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de440s.bsp \
         data/de440s-excerpt.bsp
 """
@@ -38,7 +39,15 @@ SIGNS = [
 ]
 ELEMENTS = dict(SIGNS)
 
-BODIES = {"sun": "sun", "moon": "moon", "mercury": "mercury barycenter"}
+BODIES = {
+    "sun": "sun",
+    "moon": "moon",
+    "mercury": "mercury barycenter",
+    "venus": "venus barycenter",
+    "mars": "mars barycenter",
+    "jupiter": "jupiter barycenter",
+    "saturn": "saturn barycenter",
+}
 
 
 @lru_cache(maxsize=1)
@@ -55,8 +64,8 @@ def ecliptic_longitude(body: str, when: datetime) -> float:
     """Apparent geocentric longitude in degrees, on the ecliptic of date (tropical)."""
     ts, eph = _ephemeris()
     t = ts.from_datetime(when)
-    # Light deflection by the Sun only: the excerpt has no Jupiter or Saturn, whose
-    # effect (milliarcseconds) could never change a sign
+    # Light deflection by the Sun only: the other bodies' effect (milliarcseconds)
+    # could never change a sign
     position = eph["earth"].at(t).observe(eph[BODIES[body]]).apparent(deflectors=(10,))
     _, lon, _ = position.frame_latlon(ecliptic_frame)
     return lon.degrees

@@ -1,5 +1,6 @@
 // The pre-reading ritual: the question is carved into a sigil, then breathe, cut the
-// deck and choose a pile (or, for the cowries, let the shells fall).
+// deck and choose a pile (for the cowries, let the shells fall; for the jataka, the
+// grahas take their places).
 // It is ceremony only (the server draws the cards at random), and it runs while the
 // reading is being fetched, so it fills the wait rather than adding to it.
 import { sleep } from "./util.js";
@@ -7,10 +8,16 @@ import * as sound from "./sound.js";
 import { drawSigil } from "./sigil.js";
 
 const BREATH_SECONDS = 4;
+const CHOSEN = {
+    tarot: "The oracle has chosen the cards.",
+    kaudi: "The oracle has chosen the cowries.",
+    jataka: "The oracle turns to your jataka.",
+};
 
-// oracle: "tarot", "kaudi", or "auto", in which case chosen resolves to the oracle the
-// reading actually used ("tarot", "kaudi", or null if it failed) and the ritual waits
-// for it before its last step, so the cut matches what is revealed.
+// oracle: "tarot", "kaudi", "jataka", or "auto", in which case chosen resolves to the
+// oracle the reading actually used ("tarot", "kaudi", "jataka", or null if it failed)
+// and the ritual waits for it before its last step, so the ending matches what is
+// revealed.
 export function runRitual(question, { oracle = "auto", chosen = Promise.resolve(null) } = {}) {
     const overlay = document.getElementById("ritual");
     const questionEl = document.getElementById("ritual-question");
@@ -91,9 +98,16 @@ export function runRitual(question, { oracle = "auto", chosen = Promise.resolve(
             say("The oracle is choosing…");
             finale = await Promise.race([chosen, skipped]);
             if (isSkipped || !finale) return;
-            say(finale === "kaudi" ? "The oracle has chosen the cowries." : "The oracle has chosen the cards.");
+            say(CHOSEN[finale] || CHOSEN.tarot);
             await wait(1300);
             if (isSkipped) return;
+        }
+        if (finale === "jataka") {
+            // No gesture to make: the chart was fixed at birth
+            orb.className = "breath-orb dim";
+            say("The nine grahas take their places around you…");
+            await wait(2200);
+            return;
         }
         orb.hidden = true;
 

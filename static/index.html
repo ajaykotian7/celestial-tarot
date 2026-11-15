@@ -73,6 +73,7 @@
                 🪔 <span id="panchang-btn-label"></span>
             </button>
             <button id="daily-card-btn" class="daily-card-btn" type="button" hidden>✦ Your card for today</button>
+            <button id="jataka-btn" class="daily-card-btn" type="button" hidden>🪐 Your jataka</button>
         </div>
     </header>
 
@@ -102,6 +103,7 @@
             <button type="button" data-oracle="auto" aria-pressed="true">✦ Let the oracle choose</button>
             <button type="button" data-oracle="tarot" aria-pressed="false">🃏 Cards</button>
             <button type="button" data-oracle="kaudi" aria-pressed="false">🐚 Kaudi</button>
+            <button type="button" data-oracle="jataka" aria-pressed="false">🪐 Jataka</button>
         </div>
 
         <div class="input-bar">
@@ -157,8 +159,8 @@
             <h2 id="profile-title">Let the cards know you</h2>
             <p class="panel-sub">
                 Everything here is optional and saved only on this device. Your birth details are used
-                to work out your rashi, nakshatra, signs, birth card and numbers. Only those reach the
-                oracle, never the details themselves.
+                to work out your rashi, nakshatra, jataka, signs, birth card and numbers. Only those
+                reach the oracle, never the details themselves.
             </p>
             <form id="profile-form" class="profile-form" autocomplete="off">
                 <label class="field">
@@ -176,7 +178,7 @@
                     </label>
                 </div>
                 <div class="field">
-                    <label for="place-input">Birth place <em>(optional: with birth time, reveals your lagna and rising sign)</em></label>
+                    <label for="place-input">Birth place <em>(optional: with birth time, reveals your lagna, rising sign and full jataka)</em></label>
                     <input id="place-input" type="text" placeholder="Search a city…" />
                     <ul id="place-results" class="place-results"></ul>
                     <div id="place-chosen" class="place-chosen" hidden>
@@ -206,6 +208,20 @@
                 Worked out for this moment with the Lahiri ayanamsa. Traditional calendars fix each
                 day's tithi at sunrise, so for fasts and festivals, follow your family's panchang.
             </p>
+        </div>
+    </div>
+
+    <!-- Jataka: the Vedic birth chart, kept only on this device -->
+    <div id="jataka-panel" class="panel-overlay" role="dialog" aria-modal="true" aria-labelledby="jataka-title" hidden>
+        <div class="panel jataka-panel">
+            <button id="jataka-close" class="panel-close" type="button" aria-label="Close">✕</button>
+            <h2 id="jataka-title">Your jataka <span class="deva" lang="sa">जातक</span></h2>
+            <p class="panel-sub">
+                Your birth chart as a jyotishi draws it in the South, with your dashas, Shani's
+                passage around your Moon, and your doshas and yogas. It stays on this device; the
+                oracle is given only a summary in words, never the details of your birth.
+            </p>
+            <div id="jataka-body" class="jataka-body"></div>
         </div>
     </div>
 

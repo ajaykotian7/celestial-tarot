@@ -1,3 +1,4 @@
+import asyncio
 import datetime as dt
 import hmac
 import json
@@ -5,6 +6,7 @@ import logging
 import os
 import time
 from collections import Counter
+from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from dotenv import load_dotenv
@@ -18,6 +20,7 @@ from astrology import current_sky
 from celestial import is_witching_hour, moon_phase
 from jyotish import panchang
 from kaudi import cast_kaudi, kaudi_tool
+from kundali import current_line, jataka_summary, jataka_tool, sign_ingresses
 from personal import daily_card, derive_insights
 from tarot_engine import (
     TAROT_DECK,
@@ -33,7 +36,21 @@ load_dotenv()
 
 logger = logging.getLogger("uvicorn.error")
 
-app = FastAPI(title="Celestial Tarot AI")
+def build_transit_tables() -> None:
+    for graha in ("saturn", "jupiter", "rahu"):
+        sign_ingresses(graha)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Shani, Guru and Rahu's ingress tables take a second or two to build; start them
+    # now, in the background, so the first jataka after a restart doesn't wait
+    warm_up = asyncio.create_task(asyncio.to_thread(build_transit_tables))
+    yield
+    warm_up.cancel()
+
+
+app = FastAPI(title="Celestial Tarot AI", lifespan=lifespan)
 
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -109,12 +126,28 @@ KAUDI_READING = (
     "for each heap."
 )
 
+JATAKA_READING = (
+    "Answer from their jataka: the mahadasha, antardasha and pratyantardasha running now "
+    "and what their lords occupy and rule in the chart, the transits from the Moon (Sade "
+    "Sati, Guru, Rahu and Ketu), the natal houses that bear on the question, and any "
+    "doshas or yogas that matter to it. Name the houses and grahas you are reading from, "
+    "in plain words. Give timing as the periods in the jataka (for example 'from the "
+    "Guru antardasha in 2029'), as tendencies, never certainties. Never predict death, "
+    "serious illness, accidents or the end of a marriage, and never frighten: when a dosha "
+    "or a hard period comes up, say what it traditionally means, any cancellations, and "
+    "when it eases. Never recommend gemstones or paid pujas; if a remedy fits, offer a "
+    "simple one (a prayer or mantra, a lamp, a fast, charity). The querent's family "
+    "jyotishi knows them best; never contradict them."
+)
+
 # What to do with a new question, by the oracle the querent chose
 NEW_READING_PROMPTS = {
     "tarot": "This is a new question, so draw cards with draw_spread before answering. "
     + SPREAD_SIZING,
     "kaudi": "This is a new question, so cast the cowries with cast_kaudi before answering. "
     + KAUDI_READING,
+    "jataka": "This is a new question, so read the querent's jataka with consult_jataka "
+    "before answering. " + JATAKA_READING,
     "auto": (
         "This is a new question. Consult one oracle before answering. Cast the cowries "
         "(cast_kaudi) for a direct question about whether something will happen or how a "
@@ -126,10 +159,23 @@ NEW_READING_PROMPTS = {
     ),
 }
 
+# Added to "auto" when the querent has a jataka to read
+AUTO_JATAKA = (
+    "The querent's jataka can be read too (consult_jataka): choose it for questions about "
+    "timing, life periods, the past and future, career or marriage prospects, Sade Sati or "
+    "doshas. "
+    + JATAKA_READING
+)
+
+NO_JATAKA_REPLY = (
+    "Your jataka needs your birth time and birth place. Add them under ☉ You, and the "
+    "grahas will answer."
+)
+
 FOLLOW_UP_PROMPT = (
-    "The querent is asking a follow-up about the cards or cowries already cast in this "
-    "conversation. Answer from those. Only draw or cast again if they explicitly ask for "
-    "a new reading."
+    "The querent is asking a follow-up about the cards, cowries or jataka already read in "
+    "this conversation. Answer from those. Only draw or cast again if they explicitly ask "
+    "for a new reading."
 )
 
 # In the app's story, watchers in the dark try to cloud readings; the querent drives
@@ -180,12 +226,14 @@ class JournalHeap(BaseModel):
 
 class JournalEntry(BaseModel):
     """A summary of a past reading from the querent's on-device journal: tarot cards,
-    or the three heaps of a kaudi casting."""
+    the three heaps of a kaudi casting, or the dasha a jataka reading was made in."""
 
     date: dt.date
     question: str = Field(max_length=300)
     cards: List[JournalCard] = Field(default=[], max_length=10)
     kaudi: List[JournalHeap] = Field(default=[], max_length=3)
+    # e.g. "Chandra–Budh" (mahadasha–antardasha)
+    jataka: Optional[str] = Field(default=None, max_length=60)
     tldr: Optional[str] = Field(default=None, max_length=400)
 
 
@@ -201,8 +249,9 @@ class ChatRequest(BaseModel):
     # True for a fresh question: cards must be drawn (or cowries cast). False for
     # follow-ups about what is already on the table.
     new_reading: bool = False
-    # For a new reading: the tarot, the cowries, or let the oracle choose
-    oracle: Literal["auto", "tarot", "kaudi"] = "auto"
+    # For a new reading: the tarot, the cowries, the querent's jataka, or let the
+    # oracle choose
+    oracle: Literal["auto", "tarot", "kaudi", "jataka"] = "auto"
     # A watcher was in the dark, uncaught, when the question was asked
     watched: bool = False
     # The querent's local hour, used for the witching-hour tone
@@ -255,10 +304,12 @@ def pin_matches(candidate: Optional[str]) -> bool:
     )
 
 
-def run_tool(name: str, raw_args: Optional[str]) -> Dict[str, Any]:
+def run_tool(
+    name: str, raw_args: Optional[str], functions: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Run a model-requested tool. Always returns a result, so every tool call
     gets a response message (OpenAI rejects the follow-up request otherwise)."""
-    fn = AVAILABLE_FUNCTIONS.get(name)
+    fn = (functions or AVAILABLE_FUNCTIONS).get(name)
     if fn is None:
         return {"status": "error", "message": f"Unknown tool: {name}"}
     try:
@@ -410,6 +461,11 @@ def profile_prompt(
         vedic = describe_vedic(insights.get("vedic"))
         if vedic:
             lines.append(vedic)
+        if insights.get("jataka"):
+            lines.append(
+                f"Their jataka: {current_line(insights['jataka'])}. "
+                "consult_jataka gives the full chart when a question needs it."
+            )
         lines.append(describe_numerology(insights["numerology"]))
         personal = ", ".join(
             f"{card_display_name(key)} ({reason})"
@@ -433,7 +489,9 @@ def journal_prompt(entries: List[JournalEntry]) -> Optional[str]:
     lines = []
     counts: Counter = Counter()
     for entry in entries:
-        if entry.kaudi:
+        if entry.jataka:
+            drew = f"read their jataka ({entry.jataka} dasha)"
+        elif entry.kaudi:
             drew = "cast the cowries: " + ", ".join(
                 f"{h.position.lower()} {h.aya} ({h.remainder})" for h in entry.kaudi
             )
@@ -457,6 +515,10 @@ def journal_prompt(entries: List[JournalEntry]) -> Optional[str]:
     )
 
 
+def has_jataka(insights: Optional[Dict[str, Any]]) -> bool:
+    return bool(insights and insights.get("jataka"))
+
+
 def build_system_prompt(
     payload: ChatRequest, insights: Optional[Dict[str, Any]] = None
 ) -> str:
@@ -473,6 +535,8 @@ def build_system_prompt(
         panchang_prompt(panchang(local_date=payload.local_date)),
     ]
     parts.append(NEW_READING_PROMPTS[payload.oracle] if payload.new_reading else FOLLOW_UP_PROMPT)
+    if payload.new_reading and payload.oracle == "auto" and has_jataka(insights):
+        parts.append(AUTO_JATAKA)
     if is_witching_hour(payload.local_hour):
         parts.append(WITCHING_HOUR_PROMPT)
     if payload.watched and payload.new_reading:
@@ -516,23 +580,45 @@ def public_insights(insights: Optional[Dict[str, Any]]) -> Optional[Dict[str, An
     }
 
 
-def tool_settings(payload: ChatRequest) -> Dict[str, Any]:
+ORACLE_TOOLS = {"tarot": "draw_spread", "kaudi": "cast_kaudi", "jataka": "consult_jataka"}
+
+
+def tool_settings(payload: ChatRequest, with_jataka: bool = False) -> Dict[str, Any]:
     """Tools for the first completion. A new question must consult exactly one oracle:
     the one the querent chose, or (auto) whichever the model judges fits. Follow-ups
-    may use any tool, or none."""
+    may use any tool, or none. The jataka is offered only to a querent who has one."""
+    tools = [*ALL_TOOLS, jataka_tool] if with_jataka else ALL_TOOLS
     if not payload.new_reading:
-        return {"tools": ALL_TOOLS, "tool_choice": "auto"}
+        return {"tools": tools, "tool_choice": "auto"}
     if payload.oracle == "auto":
         return {
-            "tools": [DRAW_SPREAD_TOOL, kaudi_tool],
+            "tools": [DRAW_SPREAD_TOOL, kaudi_tool, *([jataka_tool] if with_jataka else [])],
             "tool_choice": "required",
             "parallel_tool_calls": False,
         }
-    name = "cast_kaudi" if payload.oracle == "kaudi" else "draw_spread"
     return {
-        "tools": ALL_TOOLS,
-        "tool_choice": {"type": "function", "function": {"name": name}},
+        "tools": tools,
+        "tool_choice": {"type": "function", "function": {"name": ORACLE_TOOLS[payload.oracle]}},
     }
+
+
+def jataka_tool_result(
+    insights: Optional[Dict[str, Any]], profile: Optional[Profile], today: dt.date
+) -> Dict[str, Any]:
+    """What consult_jataka gives the model: a summary in words, never the chart itself."""
+    if not has_jataka(insights) or profile is None or profile.birth_date is None:
+        return {"status": "error", "message": "The querent has no jataka to read."}
+    return {
+        "status": "success",
+        "jataka": jataka_summary(insights["jataka"], profile.birth_date, today),
+    }
+
+
+def dasha_now(insights: Dict[str, Any]) -> Optional[Dict[str, str]]:
+    current = insights["jataka"]["dasha"]["current"]
+    if not current:
+        return None
+    return {level: period["lord"] for level, period in current.items()}
 
 
 @app.get("/")
@@ -612,6 +698,17 @@ async def chat_endpoint(
     try:
         today = payload.local_date or dt.datetime.now(dt.timezone.utc).date()
         querent = insights_for(payload.profile, today)
+        with_jataka = has_jataka(querent)
+        if payload.new_reading and payload.oracle == "jataka" and not with_jataka:
+            # Nothing to read, so don't spend a completion on it
+            return {
+                "reply": NO_JATAKA_REPLY,
+                "cards": [],
+                "spread": None,
+                "kaudi": None,
+                "jataka": None,
+                "tldr": None,
+            }
         system_prompt = build_system_prompt(payload, querent)
         messages: List[Any] = [{"role": "system", "content": system_prompt}]
 
@@ -623,7 +720,7 @@ async def chat_endpoint(
         response = await client.chat.completions.create(
             model=MODEL,
             messages=messages,
-            **tool_settings(payload),
+            **tool_settings(payload, with_jataka),
             max_tokens=MAX_COMPLETION_TOKENS,
         )
 
@@ -631,12 +728,17 @@ async def chat_endpoint(
         drawn_cards_data = []
         drawn_spread = None
         cast = None
+        read_jataka = None
+        functions = {
+            **AVAILABLE_FUNCTIONS,
+            "consult_jataka": lambda: jataka_tool_result(querent, payload.profile, today),
+        }
 
         if resp_msg.tool_calls:
             messages.append(resp_msg)
             for tool_call in resp_msg.tool_calls:
                 fn_name = tool_call.function.name
-                tool_res = run_tool(fn_name, tool_call.function.arguments)
+                tool_res = run_tool(fn_name, tool_call.function.arguments, functions)
                 if fn_name == "draw_spread" and "cards" in tool_res:
                     # Marked before the model sees the result, so it can call them out
                     mark_personal_cards(tool_res["cards"], querent)
@@ -644,6 +746,8 @@ async def chat_endpoint(
                     drawn_spread = tool_res["spread_type"]
                 elif fn_name == "cast_kaudi" and "heaps" in tool_res:
                     cast = tool_res
+                elif fn_name == "consult_jataka" and tool_res["status"] == "success":
+                    read_jataka = dasha_now(querent)
 
                 messages.append(
                     {
@@ -673,6 +777,8 @@ async def chat_endpoint(
             "cards": drawn_cards_data,
             "spread": drawn_spread,
             "kaudi": cast and {"heaps": cast["heaps"], "leaning": cast["leaning"]},
+            # The dasha lords the jataka was read in; the browser draws the chart itself
+            "jataka": read_jataka,
             "tldr": tldr_summary,
         }
 

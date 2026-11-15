@@ -186,6 +186,7 @@ def test_chat_plain_reply_with_tldr(http, monkeypatch):
         "cards": [],
         "spread": None,
         "kaudi": None,
+        "jataka": None,
         "tldr": "Go for it.",
     }
     sent = completions.calls[0]["messages"]
@@ -560,3 +561,94 @@ def test_insights_without_profile_still_gives_a_daily_card(http):
     body = http.post("/api/insights", json={"local_date": "2026-10-15"}).json()
     assert body["insights"] is None
     assert body["daily_card"]["card"]
+
+
+# --- The jataka oracle ---
+
+
+def jataka_call(call_id="call_1"):
+    return completion(tool_calls=[tool_call(call_id, "consult_jataka", "{}")])
+
+
+def test_jataka_oracle_reads_a_summary_never_the_birth_details(http, monkeypatch):
+    completions = fake_openai(monkeypatch, jataka_call(), completion("The grahas speak."))
+
+    body = chat(http, new_reading=True, oracle="jataka", profile=PROFILE, local_date="2026-11-15").json()
+
+    first, second = completions.calls
+    assert first["tool_choice"] == {"type": "function", "function": {"name": "consult_jataka"}}
+    assert app_module.NEW_READING_PROMPTS["jataka"] in first["messages"][0]["content"]
+    # Every reading knows the running dasha in one line
+    assert "running Chandra mahadasha" in first["messages"][0]["content"]
+    summary = json.loads(second["messages"][-1]["content"])["jataka"]
+    assert "Tula (Libra)" in summary and "Sade Sati is running" in summary
+    sent = json.dumps([m for m in second["messages"] if isinstance(m, dict)])
+    for private in ("1990", "07-15", "14:30", "19.07", "72.88", "Kolkata", "°"):
+        assert private not in sent
+    assert body["jataka"] == {
+        "mahadasha": "Chandra", "antardasha": "Chandra", "pratyantardasha": "Budh",
+    }
+    assert body["cards"] == [] and body["kaudi"] is None
+
+
+def test_jataka_oracle_without_birth_time_asks_for_it_and_spends_nothing(http, monkeypatch):
+    completions = fake_openai(monkeypatch)
+    no_time = {**PROFILE, "birth_time": None}
+
+    body = chat(http, new_reading=True, oracle="jataka", profile=no_time).json()
+
+    assert body["reply"] == app_module.NO_JATAKA_REPLY
+    assert completions.calls == []
+
+
+@pytest.mark.parametrize("profile, offered", [(PROFILE, True), (None, False)])
+def test_auto_offers_the_jataka_only_to_those_who_have_one(http, monkeypatch, profile, offered):
+    completions = fake_openai(monkeypatch, draw_call("single_card"), completion("ok"))
+
+    chat(http, new_reading=True, profile=profile, local_date="2026-11-15")
+
+    first = completions.calls[0]
+    names = {t["function"]["name"] for t in first["tools"]}
+    assert ("consult_jataka" in names) is offered
+    assert (app_module.AUTO_JATAKA in first["messages"][0]["content"]) is offered
+
+
+def test_follow_ups_can_consult_the_jataka(http, monkeypatch):
+    completions = fake_openai(monkeypatch, jataka_call(), completion("ok"))
+
+    body = chat(http, profile=PROFILE, local_date="2026-11-15").json()
+
+    assert "consult_jataka" in {t["function"]["name"] for t in completions.calls[0]["tools"]}
+    assert body["jataka"]["mahadasha"] == "Chandra"
+
+
+def test_jataka_journal_entries_reach_the_model(http, monkeypatch):
+    completions = fake_openai(monkeypatch, completion("ok"))
+    readings = [{"date": "2026-11-10", "question": "Career?", "jataka": "Chandra–Chandra"}]
+
+    chat(http, recent_readings=readings)
+
+    assert "read their jataka (Chandra–Chandra dasha)" in system_prompt_of(completions)
+
+
+def test_insights_include_the_jataka(http):
+    insights = http.post(
+        "/api/insights", json={"profile": PROFILE, "local_date": "2026-11-15"}
+    ).json()["insights"]
+    jataka = insights["jataka"]
+    assert jataka["lagna"]["name"] == "Tula"
+    assert len(jataka["grahas"]) == 9 and len(jataka["dasha"]["mahadashas"]) == 9
+    assert {d["key"] for d in jataka["doshas"]} >= {"mangal", "kaal_sarp", "sade_sati"}
+    assert jataka["dasha"]["current"]["mahadasha"]["lord"] == "Chandra"
+
+
+def test_a_failing_jataka_leaves_the_rest_of_the_profile(http, monkeypatch):
+    import personal
+
+    def broken(*args, **kwargs):
+        raise RuntimeError("ephemeris trouble")
+
+    monkeypatch.setattr(personal, "jataka", broken)
+    insights = http.post("/api/insights", json={"profile": PROFILE}).json()["insights"]
+    assert insights["jataka"] is None
+    assert insights["vedic"]["rashi"]["name"] == "Meena"

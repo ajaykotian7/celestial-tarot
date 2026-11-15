@@ -4,11 +4,15 @@ birth date, time or place."""
 
 import copy
 import hashlib
+import logging
 from datetime import date, time
 from typing import Any, Dict, List, Optional
 
 from astrology import birth_chart
 from jyotish import vedic_chart
+from kundali import jataka
+
+logger = logging.getLogger("uvicorn.error")
 from tarot_engine import MAJOR_ARCANA, TAROT_DECK, card_display_name, card_image_path
 
 MASTER_NUMBERS = {11, 22, 33}
@@ -246,6 +250,12 @@ def derive_insights(
             )
 
     vedic = vedic_chart(birth_date, birth_time, tz_name, latitude, longitude)
+    try:
+        janma_kundali = jataka(birth_date, today, birth_time, tz_name, latitude, longitude)
+    except Exception:
+        # The rest of the profile still reaches the reading
+        logger.exception("Could not work out the jataka")
+        janma_kundali = None
 
     return {
         "sun": (chart or {}).get("sun"),
@@ -261,4 +271,6 @@ def derive_insights(
         "vedic": copy.deepcopy(vedic),
         # Moolank, Bhagyank, name number and the Lo Shu grid
         "numerology": numerology(birth_date, name),
+        # The full Vedic birth chart, dashas, transits and doshas (needs time and place)
+        "jataka": janma_kundali,
     }

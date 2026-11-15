@@ -92,6 +92,7 @@ numpy==2.5.4
     # via
     #   jplephem
     #   skyfield
+    #   tarot-space
 openai==3.31.0
     # via tarot-space
 opentelemetry-api==1.45.1

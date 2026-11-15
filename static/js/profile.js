@@ -523,11 +523,12 @@ export function showPortrait(insights, { celebrate = false } = {}) {
     $("profile-edit-btn").focus();
 }
 
-// With a saved profile, open on the portrait; otherwise on the form
-export function openPanel(insights) {
+// With a saved profile, open on the portrait; otherwise (or with edit) on the form
+export function openPanel(insights, { edit = false } = {}) {
     lastFocus = document.activeElement;
+    shownInsights = insights;
     $("profile-panel").hidden = false;
-    if (load()) showPortrait(insights);
+    if (load() && !edit) showPortrait(insights);
     else showForm();
 }
 
