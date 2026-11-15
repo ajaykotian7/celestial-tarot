@@ -1,122 +1,163 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="auto">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Celestial Tarot AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Celestial</title>
+    <meta name="description" content="A family almanac: today's panchang and Rahu Kaal, your jataka, dashas and doshas, kundali matching, muhurats, festivals, and readings from the tarot, the cowries and the stars.">
+    <meta name="theme-color" content="#f6efe2" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#15151f" media="(prefers-color-scheme: dark)">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/static/icons/icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Celestial">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500;600&family=Tiro+Devanagari+Sanskrit&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;500;600;700&family=Rozha+One&family=Tiro+Devanagari+Sanskrit&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
+    <script>
+        // Before first paint, so the page doesn't flash the wrong theme or size
+        try {
+            document.documentElement.dataset.theme = localStorage.getItem("tarot_theme") || "auto";
+            document.documentElement.dataset.size = localStorage.getItem("tarot_text_size") || "normal";
+        } catch (e) {}
+    </script>
     <script type="module" src="/static/js/main.js"></script>
 </head>
 
 <body>
-    <!-- Living sky: stars, dust, moon (canvas) and drifting mist -->
-    <canvas id="sky-canvas" aria-hidden="true"></canvas>
-    <div class="mist" aria-hidden="true">
-        <div class="mist-layer m1"></div>
-        <div class="mist-layer m2"></div>
-    </div>
-    <!-- The dark sanctum, lit only by the lamp you carry -->
-    <canvas id="sanctum-canvas" aria-hidden="true"></canvas>
-    <div id="lantern-veil" class="lantern-veil" aria-hidden="true" hidden></div>
-    <!-- The watchers: above the page, so they can't hide behind it -->
-    <canvas id="watchers-canvas" aria-hidden="true" hidden></canvas>
-
-    <!-- Full-Page Gatekeeper Blocker Screen -->
-    <div id="blocker-screen">
-        <div class="gatekeeper-card">
-            <div class="gatekeeper-icon">🪔</div>
-            <h2>The Sanctum is Sealed</h2>
-            <p>Few have come this far. Speak the passphrase to cross the threshold.</p>
-            <input type="password" id="gatekeeper-pin" class="pin-input-field" placeholder="Passphrase" aria-label="Passphrase" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" />
-            <button class="btn-unlock" id="unlock-btn" type="button">ENTER THE SANCTUM</button>
-            <div id="blocker-error" class="error-msg">Incorrect passphrase.</div>
-        </div>
+    <!-- The gate: a passphrase keeps the app to family -->
+    <div id="gate" class="gate">
+        <svg id="gate-kolam" class="kolam" aria-hidden="true"></svg>
+        <h1>Celestial</h1>
+        <p class="muted">Panchang · Jataka · Tarot · Kaudi</p>
+        <form id="gate-form" autocomplete="on">
+            <input type="password" id="gate-pin" class="input" placeholder="Passphrase" aria-label="Passphrase"
+                autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false">
+            <button class="btn wide" id="gate-btn" type="submit">Enter</button>
+            <p id="gate-error" class="error" role="alert"></p>
+        </form>
     </div>
 
-    <div class="top-bar">
-        <span id="moon-label" class="moon-label">
-            <span id="moon-emoji" aria-hidden="true"></span>
-            <span id="moon-name" class="pill-label"></span>
-            <span id="retrograde-badge" class="retrograde-badge" title="Mercury is retrograde" hidden>☿ ℞</span>
-        </span>
-        <div class="top-actions">
-            <button id="profile-btn" class="pill-btn" type="button" aria-label="Your profile">
-                <span class="pill-icon" aria-hidden="true">☉</span><span class="pill-label">You</span>
+    <div id="app" class="app" hidden>
+        <header class="app-header">
+            <button id="person-btn" class="person-chip" type="button" aria-label="Choose who this is for">
+                <span id="person-avatar" class="avatar">?</span>
+                <span id="person-name" class="who">Add someone</span>
+                <span aria-hidden="true">▾</span>
             </button>
-            <button id="journal-btn" class="pill-btn" type="button" aria-label="Reading journal">
-                <span class="pill-icon" aria-hidden="true">📖</span><span class="pill-label">Journal</span>
+            <div id="header-title" class="header-title">Today</div>
+            <button id="settings-btn" class="icon-btn" type="button" aria-label="Settings">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path>
+                </svg>
             </button>
-            <button id="ritual-toggle" class="pill-btn" type="button" aria-pressed="true" aria-label="Ritual before readings">
-                <span class="pill-icon" aria-hidden="true">✦</span><span class="pill-label">Ritual on</span>
-            </button>
-            <button id="sound-toggle" class="pill-btn" type="button" aria-pressed="false" aria-label="Sound">
-                <span class="pill-icon" aria-hidden="true">🔇</span><span class="pill-label">Sound off</span>
-            </button>
-            <button id="lock-btn" class="pill-btn" type="button" aria-label="Lock oracle">
-                <span class="pill-icon" aria-hidden="true">🔒</span><span class="pill-label">Lock</span>
-            </button>
-        </div>
-    </div>
+        </header>
 
-    <header>
-        <h1>Celestial Tarot</h1>
-        <p id="tagline">Carry your lamp closer. The old cards are listening.</p>
-        <div class="header-actions">
-            <button id="panchang-btn" class="daily-card-btn" type="button" aria-label="Today's panchang" hidden>
-                🪔 <span id="panchang-btn-label"></span>
-            </button>
-            <button id="daily-card-btn" class="daily-card-btn" type="button" hidden>✦ Your card for today</button>
-            <button id="jataka-btn" class="daily-card-btn" type="button" hidden>🪐 Your jataka</button>
-        </div>
-    </header>
+        <main>
+            <section id="tab-today" class="tab" aria-label="Today"></section>
 
-    <main id="main-container">
-        <section class="table" aria-label="Reading table">
-            <div id="cards-tray" class="cards-tray"></div>
-            <ol id="spread-legend" class="spread-legend"></ol>
-
-            <div id="shuffler" class="animation-stage" aria-hidden="true">
-                <div class="deck-container">
-                    <div class="shuffle-card card-back-art c1"></div>
-                    <div class="shuffle-card card-back-art c2"></div>
-                    <div class="shuffle-card card-back-art c3"></div>
+            <section id="tab-ask" class="tab" aria-label="Ask" hidden>
+                <div class="asking-about">
+                    <span class="muted">Asking about</span>
+                    <button id="ask-person" class="chip" type="button"></button>
                 </div>
-            </div>
-        </section>
+                <div class="ask-box">
+                    <div id="topic-chips" class="chip-scroll" role="group" aria-label="Topic"></div>
+                    <textarea id="question" maxlength="1000" aria-label="Your question" placeholder="Ask what is on your mind…"></textarea>
+                    <div id="suggestions" class="suggestions"></div>
+                    <div class="ask-actions">
+                        <div id="method" class="seg" role="group" aria-label="How to read"></div>
+                        <button id="ask-btn" class="btn" type="button">Ask</button>
+                    </div>
+                </div>
 
-        <div id="tldr-box" class="tldr-box">
-            <div class="tldr-badge">🔮 Core Takeaway (TL;DR)</div>
-            <div id="tldr-text" class="tldr-text"></div>
+                <div id="reading" class="reading">
+                    <div id="idle" class="empty">
+                        <div class="diya" aria-hidden="true"><div class="flame"></div><div class="bowl"></div></div>
+                        <p class="muted">Light a lamp, and ask.</p>
+                    </div>
+                    <div id="dasha-ribbon" class="dasha-ribbon" hidden></div>
+                    <section class="table" aria-label="Reading table">
+                        <div id="cards-tray" class="cards-tray"></div>
+                        <ol id="spread-legend" class="spread-legend"></ol>
+                        <div id="shuffler" class="animation-stage" aria-hidden="true">
+                            <div class="deck-container">
+                                <div class="shuffle-card card-back-art c1"></div>
+                                <div class="shuffle-card card-back-art c2"></div>
+                                <div class="shuffle-card card-back-art c3"></div>
+                            </div>
+                        </div>
+                    </section>
+                    <div id="tldr-box" class="tldr-box" hidden>
+                        <div class="eyebrow">The takeaway</div>
+                        <div id="tldr-text" class="tldr-text"></div>
+                    </div>
+                    <div id="chat-output" class="narrative" aria-live="polite"></div>
+                    <div id="reading-actions" class="reading-actions" hidden>
+                        <button id="share-btn" class="btn small ghost" type="button">Share</button>
+                        <button id="copy-btn" class="btn small ghost" type="button">Copy</button>
+                        <button id="new-btn" class="btn small" type="button">New question</button>
+                    </div>
+                    <form id="follow-up" class="follow-up" hidden>
+                        <input id="follow-up-input" class="input" maxlength="1000" aria-label="Follow-up question" placeholder="Ask more about this reading…" autocomplete="off">
+                        <button class="btn small" type="submit">Ask</button>
+                    </form>
+                </div>
+
+                <section class="card" style="margin-top:22px">
+                    <div class="card-head">
+                        <h3>Past readings</h3>
+                        <span id="journal-count" class="muted"></span>
+                    </div>
+                    <p id="journal-empty" class="hint">Readings for this person will be kept here, on this device.</p>
+                    <ol id="journal-list" class="journal-list"></ol>
+                </section>
+            </section>
+
+            <section id="tab-timeline" class="tab" aria-label="Timeline" hidden></section>
+            <section id="tab-family" class="tab" aria-label="Family" hidden></section>
+            <section id="tab-calendar" class="tab" aria-label="Calendar" hidden></section>
+        </main>
+
+        <nav class="tabbar" aria-label="Sections">
+            <button class="tab-btn" type="button" data-tab="today" id="tab-btn-today">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+                Today
+            </button>
+            <button class="tab-btn" type="button" data-tab="ask" id="tab-btn-ask">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c2 3 3 4.6 3 6.4A3 3 0 0 1 12 12.5a3 3 0 0 1-3-3.1C9 7.6 10 6 12 3z"></path><path d="M4 15h16c0 3-3.6 5-8 5s-8-2-8-5z"></path></svg>
+                Ask
+            </button>
+            <button class="tab-btn" type="button" data-tab="timeline" id="tab-btn-timeline">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20"></path><circle cx="12" cy="6" r="2"></circle><circle cx="12" cy="13" r="2"></circle><path d="M14 6h6M4 13h6M14 19h5"></path></svg>
+                Timeline
+            </button>
+            <button class="tab-btn" type="button" data-tab="family" id="tab-btn-family">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"></path><circle cx="17.5" cy="9.5" r="2.5"></circle><path d="M16 14.3c3 .3 5 2.6 5 5.7"></path></svg>
+                Family
+            </button>
+            <button class="tab-btn" type="button" data-tab="calendar" id="tab-btn-calendar">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M3 10h18M8 3v4M16 3v4"></path><circle cx="12" cy="15.5" r="1.5"></circle></svg>
+                Calendar
+            </button>
+        </nav>
+    </div>
+
+    <!-- Bottom sheets: pickers, forms and details -->
+    <div id="sheet" class="sheet-overlay" hidden>
+        <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+            <div class="sheet-handle" aria-hidden="true"></div>
+            <button id="sheet-close" class="sheet-close" type="button" aria-label="Close">✕</button>
+            <h2 id="sheet-title"></h2>
+            <div id="sheet-body"></div>
         </div>
-
-        <div class="chat-box" id="chat-output" aria-live="polite"></div>
-
-        <!-- Which oracle answers a new question -->
-        <div id="oracle-picker" class="oracle-picker" role="group" aria-label="Choose your oracle">
-            <button type="button" data-oracle="auto" aria-pressed="true">✦ Let the oracle choose</button>
-            <button type="button" data-oracle="tarot" aria-pressed="false">🃏 Cards</button>
-            <button type="button" data-oracle="kaudi" aria-pressed="false">🐚 Kaudi</button>
-            <button type="button" data-oracle="jataka" aria-pressed="false">🪐 Jataka</button>
-        </div>
-
-        <div class="input-bar">
-            <input type="text" id="user-input" placeholder="Ask the cards..." autocomplete="off" maxlength="1000" />
-            <button class="consult-btn" id="send-btn" type="button">CONSULT</button>
-        </div>
-
-        <button id="new-reading-btn" class="pill-btn new-reading-btn" type="button" hidden>
-            <span class="pill-icon" aria-hidden="true">✦</span>New reading
-        </button>
-
-        <button id="tour-btn" class="footer-link" type="button">✦ How this works</button>
-    </main>
+    </div>
 
     <!-- Pre-reading ritual -->
     <div id="ritual" class="ritual" hidden>
@@ -137,109 +178,6 @@
         </div>
     </div>
 
-    <!-- Profile: kept only on this device -->
-    <div id="profile-panel" class="panel-overlay" role="dialog" aria-modal="true" aria-label="Your profile" hidden>
-        <div class="panel">
-            <button id="profile-close" class="panel-close" type="button" aria-label="Close">✕</button>
-
-            <!-- Portrait: what the cards know, shown once a profile exists -->
-            <section id="profile-portrait" class="portrait" aria-live="polite" hidden>
-                <div id="portrait-body"></div>
-                <div class="panel-actions">
-                    <button id="profile-edit-btn" type="button" class="btn-unlock">✎ Edit details</button>
-                </div>
-                <button id="forget-me" type="button" class="btn-link danger">
-                    Forget me: erase my profile and journal from this device
-                </button>
-                <p class="hint portrait-privacy">Kept only on this device.</p>
-            </section>
-
-            <!-- Form: enter or edit details -->
-            <div id="profile-edit">
-            <h2 id="profile-title">Let the cards know you</h2>
-            <p class="panel-sub">
-                Everything here is optional and saved only on this device. Your birth details are used
-                to work out your rashi, nakshatra, jataka, signs, birth card and numbers. Only those
-                reach the oracle, never the details themselves.
-            </p>
-            <form id="profile-form" class="profile-form" autocomplete="off">
-                <label class="field">
-                    <span>What should the oracle call you?</span>
-                    <input name="name" type="text" maxlength="40" />
-                </label>
-                <div class="field-row">
-                    <label class="field">
-                        <span>Date of birth</span>
-                        <input name="birth_date" type="date" min="1900-01-03" />
-                    </label>
-                    <label class="field">
-                        <span>Birth time <em>(optional)</em></span>
-                        <input name="birth_time" type="time" />
-                    </label>
-                </div>
-                <div class="field">
-                    <label for="place-input">Birth place <em>(optional: with birth time, reveals your lagna, rising sign and full jataka)</em></label>
-                    <input id="place-input" type="text" placeholder="Search a city…" />
-                    <ul id="place-results" class="place-results"></ul>
-                    <div id="place-chosen" class="place-chosen" hidden>
-                        <span id="place-chosen-label"></span>
-                        <button id="place-clear" type="button" aria-label="Clear birth place">✕</button>
-                    </div>
-                    <span class="hint">City search by Open-Meteo.</span>
-                </div>
-
-                <div class="panel-actions">
-                    <button id="profile-save" type="submit" class="btn-unlock">Reveal what the cards know</button>
-                    <button id="profile-skip" type="button" class="btn-link">Not now</button>
-                </div>
-            </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Today's panchang -->
-    <div id="panchang-panel" class="panel-overlay" role="dialog" aria-modal="true" aria-labelledby="panchang-title" hidden>
-        <div class="panel">
-            <button id="panchang-close" class="panel-close" type="button" aria-label="Close">✕</button>
-            <h2 id="panchang-title">Today's panchang <span class="deva" lang="sa">पञ्चाङ्ग</span></h2>
-            <p class="panel-sub">The five limbs of the day, read from the sky as it is right now.</p>
-            <div id="panchang-body" class="panchang-body"></div>
-            <p class="hint">
-                Worked out for this moment with the Lahiri ayanamsa. Traditional calendars fix each
-                day's tithi at sunrise, so for fasts and festivals, follow your family's panchang.
-            </p>
-        </div>
-    </div>
-
-    <!-- Jataka: the Vedic birth chart, kept only on this device -->
-    <div id="jataka-panel" class="panel-overlay" role="dialog" aria-modal="true" aria-labelledby="jataka-title" hidden>
-        <div class="panel jataka-panel">
-            <button id="jataka-close" class="panel-close" type="button" aria-label="Close">✕</button>
-            <h2 id="jataka-title">Your jataka <span class="deva" lang="sa">जातक</span></h2>
-            <p class="panel-sub">
-                Your birth chart as a jyotishi draws it in the South, with your dashas, Shani's
-                passage around your Moon, and your doshas and yogas. It stays on this device; the
-                oracle is given only a summary in words, never the details of your birth.
-            </p>
-            <div id="jataka-body" class="jataka-body"></div>
-        </div>
-    </div>
-
-    <!-- Reading journal: kept only on this device -->
-    <div id="journal-panel" class="panel-overlay" role="dialog" aria-modal="true" aria-labelledby="journal-title" hidden>
-        <div class="panel">
-            <button id="journal-close" class="panel-close" type="button" aria-label="Close">✕</button>
-            <h2 id="journal-title">Your journal</h2>
-            <p class="panel-sub">
-                Saved only on this device. Your last few readings are shared with the oracle so it
-                can notice cards and themes that keep returning.
-            </p>
-            <div id="journal-recurring" class="insights" hidden></div>
-            <p id="journal-empty" class="hint">No readings yet. Your readings will appear here.</p>
-            <ol id="journal-list" class="journal-list"></ol>
-        </div>
-    </div>
-
     <!-- Enlarged card view -->
     <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-labelledby="lightbox-name" hidden>
         <figure class="lightbox-card">
@@ -254,6 +192,9 @@
             <button id="lightbox-close" class="lightbox-close" type="button" aria-label="Close">✕</button>
         </figure>
     </div>
+
+    <div id="toast" class="toast" role="status" hidden></div>
+    <div id="print-area" class="print-area"></div>
 </body>
 
 </html>

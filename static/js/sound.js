@@ -1,5 +1,5 @@
-// Ambient sound and effects with the Web Audio API. Four public-domain (CC0) recordings
-// in static/audio/ (tanpura drone, temple bell, breaths, ghungroo) load once sound is on;
+// Ambient sound and effects with the Web Audio API. Three public-domain (CC0) recordings
+// in static/audio/ (tanpura drone, temple bell, breaths) load once sound is on;
 // everything else is synthesised, and synthesised stand-ins play until a recording loads.
 // Sound is off by default. Browsers only allow audio after a user gesture, so the
 // AudioContext is created lazily from a click or tap.
@@ -329,7 +329,8 @@ export function stopHeartbeat() {
 // --- Breath: filtered noise that rises (in) or falls away (out) ---
 
 // Slots in breaths.mp3: [offset, duration] in seconds
-const BREATHS = { in: [0, 3.3], out: [5, 3.7], watcher: [10, 5], gasp: [15, 0.65] };
+// Slots in breaths.mp3 (it also holds two unused slots: a long exhale and a gasp)
+const BREATHS = { in: [0, 3.3], out: [5, 3.7] };
 
 // A recording, or a slot of one, at a level and stereo position
 function play(buffer, { offset = 0, duration, level = 1, pan = 0 } = {}) {
@@ -341,12 +342,11 @@ function play(buffer, { offset = 0, duration, level = 1, pan = 0 } = {}) {
     src.start(ctx.currentTime, offset, duration);
 }
 
-// A breath. watcher: not yours, but something's in the dark (a long, unnatural exhale).
-// peak sets loudness (0.06 is a normal breath).
-export function breath({ inhale = true, seconds = 3, peak = 0.06, pan = 0, watcher = false } = {}) {
+// A breath; peak sets loudness (0.06 is a normal breath)
+export function breath({ inhale = true, seconds = 3, peak = 0.06, pan = 0 } = {}) {
     if (!canPlay()) return;
     if (recordings.breaths) {
-        const [offset, duration] = BREATHS[watcher ? "watcher" : inhale ? "in" : "out"];
+        const [offset, duration] = BREATHS[inhale ? "in" : "out"];
         return play(recordings.breaths, { offset, duration, level: peak * 10, pan });
     }
     const at = ctx.currentTime;
@@ -363,16 +363,6 @@ export function breath({ inhale = true, seconds = 3, peak = 0.06, pan = 0, watch
     src.connect(band).connect(gain).connect(panner(pan));
     src.start(at);
     src.stop(at + seconds + 0.1);
-}
-
-// A sharp in-breath, as when something is caught in the light
-export function gasp({ pan = 0 } = {}) {
-    if (!canPlay()) return;
-    if (recordings.breaths) {
-        const [offset, duration] = BREATHS.gasp;
-        return play(recordings.breaths, { offset, duration, level: 0.6, pan });
-    }
-    breath({ inhale: true, seconds: 0.8, peak: 0.05, pan });
 }
 
 // --- Cowries ---
@@ -405,13 +395,12 @@ export function tick() {
 // --- Recordings ---
 // Public-domain (CC0) recordings from Freesound, cut for this app (credits in README):
 // tanpura by iluppai, temple bell (ghanta) by the_very_Real_Horst, breaths by zagor76 and
-// pqr, ghungroo by bashrambali.
+// pqr.
 
 const RECORDINGS = {
     tanpura: "/static/audio/tanpura-loop.mp3",
     bell: "/static/audio/temple-bell.mp3",
     breaths: "/static/audio/breaths.mp3",
-    ghungroo: "/static/audio/ghungroo-steps.mp3",
 };
 const recordings = {};
 
@@ -429,133 +418,4 @@ function loadRecordings() {
                 /* the synthesised stand-in carries on */
             });
     }
-}
-
-// Ghungroo: seven footsteps, each in its own one-second slot
-const GHUNGROO_STEPS = 7;
-let echo = null;
-
-// A small stone chamber: two seconds of decaying, darkening noise as the impulse
-function makeEcho() {
-    const rate = ctx.sampleRate;
-    const length = Math.floor(rate * 2.2);
-    const impulse = ctx.createBuffer(2, length, rate);
-    for (let c = 0; c < 2; c++) {
-        const data = impulse.getChannelData(c);
-        let smooth = 0;
-        for (let i = 0; i < length; i++) {
-            const t = i / rate;
-            // Duller as it fades, as stone swallows the highs
-            const k = 0.25 + 0.7 * Math.exp(-t * 2);
-            smooth += k * ((Math.random() * 2 - 1) - smooth);
-            data[i] = smooth * Math.exp(-t * 3.2);
-        }
-    }
-    const convolver = ctx.createConvolver();
-    convolver.buffer = impulse;
-    const input = ctx.createGain();
-    const output = ctx.createGain();
-    output.gain.value = 0.9;
-    input.connect(convolver).connect(output).connect(master);
-    return input;
-}
-
-// Footsteps with anklet bells. Approaching steps start far off (quiet, mostly echo) and
-// come closer; otherwise they hurry away.
-export function ghungroo({ pan = 0, steps = 4, pace = 0.55, peak = 0.5, approaching = false } = {}) {
-    if (!canPlay() || !recordings.ghungroo) return;
-    echo ||= makeEcho();
-    let at = ctx.currentTime + 0.02;
-    for (let step = 0; step < steps; step++) {
-        const near = approaching ? (step + 1) / steps : 1 - step / steps;
-        const src = ctx.createBufferSource();
-        src.buffer = recordings.ghungroo;
-        src.playbackRate.value = 0.96 + Math.random() * 0.08;
-        // Far away, the highs are lost first
-        const air = ctx.createBiquadFilter();
-        air.type = "lowpass";
-        air.frequency.value = 4500 + near * 5000;
-        const level = ctx.createGain();
-        level.gain.value = peak * (0.25 + 0.75 * near) * (0.85 + Math.random() * 0.3);
-        const dry = ctx.createGain();
-        dry.gain.value = 0.3 + 0.7 * near;
-        const wet = ctx.createGain();
-        wet.gain.value = 0.9 - 0.5 * near;
-        // Left foot, right foot
-        src.connect(air).connect(level);
-        level.connect(dry).connect(panner(pan + (step % 2 ? 0.12 : -0.12)));
-        level.connect(wet).connect(echo);
-        src.start(at, Math.floor(Math.random() * GHUNGROO_STEPS), 0.98);
-        at += pace * (0.85 + Math.random() * 0.3);
-    }
-}
-
-// A serpent's hiss, slow to rise
-export function hiss({ pan = 0, seconds = 1.8, peak = 0.03 } = {}) {
-    if (!canPlay()) return;
-    const at = ctx.currentTime;
-    const src = loopedNoise();
-    const high = ctx.createBiquadFilter();
-    high.type = "highpass";
-    high.frequency.value = 3800;
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, at);
-    gain.gain.exponentialRampToValueAtTime(peak, at + seconds * 0.4);
-    gain.gain.exponentialRampToValueAtTime(0.0001, at + seconds);
-    src.connect(high).connect(gain).connect(panner(pan));
-    src.start(at);
-    src.stop(at + seconds + 0.1);
-}
-
-// Wings beating overhead, crossing from one side to the other
-export function wings({ from = -0.9, to = 0.9, seconds = 1.8, peak = 0.09 } = {}) {
-    if (!canPlay()) return;
-    const at = ctx.currentTime;
-    const out = panner(from);
-    if (out.pan) out.pan.linearRampToValueAtTime(to, at + seconds);
-    const env = ctx.createGain();
-    env.gain.setValueAtTime(0.0001, at);
-    env.gain.exponentialRampToValueAtTime(peak, at + seconds * 0.35);
-    env.gain.exponentialRampToValueAtTime(0.0001, at + seconds);
-    env.connect(out);
-    // Two creatures, beating out of step
-    for (const rate of [9 + Math.random() * 2, 12 + Math.random() * 3]) {
-        const src = loopedNoise();
-        const band = ctx.createBiquadFilter();
-        band.type = "bandpass";
-        band.frequency.value = 900 + Math.random() * 500;
-        band.Q.value = 0.9;
-        const flap = ctx.createGain();
-        flap.gain.value = 0.5;
-        const beat = ctx.createOscillator();
-        beat.frequency.value = rate;
-        const depth = ctx.createGain();
-        depth.gain.value = 0.5;
-        beat.connect(depth).connect(flap.gain);
-        src.connect(band).connect(flap).connect(env);
-        src.start(at);
-        beat.start(at);
-        src.stop(at + seconds + 0.1);
-        beat.stop(at + seconds + 0.1);
-    }
-}
-
-// A draft through the corridor
-export function wind({ pan = 0, seconds = 3.4, peak = 0.1 } = {}) {
-    if (!canPlay()) return;
-    const at = ctx.currentTime;
-    const src = loopedNoise();
-    const band = ctx.createBiquadFilter();
-    band.type = "bandpass";
-    band.Q.value = 0.5;
-    band.frequency.setValueAtTime(320, at);
-    band.frequency.linearRampToValueAtTime(950, at + seconds * 0.3);
-    band.frequency.linearRampToValueAtTime(280, at + seconds);
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, at);
-    gain.gain.exponentialRampToValueAtTime(peak, at + seconds * 0.3);
-    gain.gain.exponentialRampToValueAtTime(0.0001, at + seconds);
-    src.connect(band).connect(gain).connect(panner(pan));
-    src.start(at);
-    src.stop(at + seconds + 0.1);
 }

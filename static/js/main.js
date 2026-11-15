@@ -1,730 +1,350 @@
-import { el, storage, buzz, sleep } from "./util.js";
+// Celestial: the app shell. The gate, the five tabs, who the app is looking at, and
+// settings. Each tab lives in its own module.
+import { el, button, storage, avatar, toast, sleep } from "./util.js";
+import * as store from "./store.js";
+import { verifyPin, PIN_KEY } from "./api.js";
 import * as sound from "./sound.js";
-import { startSky } from "./sky.js";
-import { revealSpread, clearSpread, openLightbox, closeLightbox } from "./cards.js";
-import { runRitual } from "./ritual.js";
-import * as profile from "./profile.js";
-import * as journal from "./journal.js";
+import { closeLightbox } from "./cards.js";
+import { openSheet, closeSheet, initSheet, confirmSheet } from "./sheet.js";
+import { placePicker } from "./places.js";
+import { drawKolam, kolam } from "./kolam.js";
 import { runTour } from "./tour.js";
-import { startSanctum } from "./sanctum.js";
-import * as panchang from "./panchang.js";
-import { revealKaudi } from "./kaudi.js";
-import * as jataka from "./jataka.js";
-import { startOmens } from "./omens.js";
-import * as infotip from "./infotip.js";
-
-// The server only sends the last 6 messages to the model, so don't send more
-const MAX_HISTORY_MESSAGES = 6;
-const WITCHING_HOURS = [0, 1, 2, 3];
-const ORACLES = ["auto", "tarot", "kaudi", "jataka"];
-const PLACEHOLDERS = {
-    auto: "Ask the oracle...",
-    tarot: "Ask the cards...",
-    kaudi: "Ask the shells...",
-    jataka: "Ask the grahas...",
-};
-const FOLLOW_UP_PLACEHOLDER = "Ask more about your reading...";
-const WAITING = {
-    auto: "The oracle listens...",
-    tarot: "Shuffling the deck and channeling guidance...",
-    kaudi: "Gathering the cowries...",
-    jataka: "The grahas take their places...",
-};
-const INTRO_TEXT =
-    'Ask your question, such as: "What energy surrounds my next career move?" ' +
-    "The oracle will choose how many cards to draw.";
-
-const TOUR_KEY = "tarot_tour_seen";
-// Bump for a release worth a fresh look: everyone sees the tour once more
-const TOUR_VERSION = "3";
-
-const history = [];
-// While cards are on the table, questions are follow-ups about them (no new draw)
-let cardsOnTable = false;
-let ritualEnabled = storage.get("tarot_ritual") !== "off";
-// Which oracle answers a new question: let it choose, the cards, the cowries or the jataka
-let oracle = ORACLES.includes(storage.get("tarot_oracle")) ? storage.get("tarot_oracle") : "auto";
-// Derived from the profile by the server: signs, birth card, numbers
-let insights = null;
-let dailyCard = null;
-let insightsReady = Promise.resolve();
-let skyReady = Promise.resolve();
+import * as today from "./today.js";
+import * as ask from "./ask.js";
+import * as timeline from "./timeline.js";
+import * as family from "./family.js";
+import * as calendar from "./calendar.js";
 
 const $ = (id) => document.getElementById(id);
-const sky = startSky($("sky-canvas"));
-// Where the watchers creep: toward the cards on the table, or the question being written
-function readingFocus() {
-    const tray = $("cards-tray");
-    const r = (tray.childElementCount ? tray : $("user-input")).getBoundingClientRect();
-    if (!r.width || r.bottom < 0 || r.top > window.innerHeight) return null;
-    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-}
 
-// When something watches from the dark, a breath close by; caught in the light, a gasp
-const sanctum = startSanctum($("sanctum-canvas"), $("lantern-veil"), {
-    watchers: $("watchers-canvas"),
-    focus: readingFocus,
-    // Each kind of watcher arrives with its own sound; the temple cat makes none
-    onWatch: ({ kind, pan }) => {
-        if (kind === "ember") sound.ghungroo({ pan, steps: 4, approaching: true });
-        else if (kind === "serpent") sound.hiss({ pan });
-        else if (kind === "pale") sound.breath({ watcher: true, seconds: 2.6, peak: 0.035, pan });
-    },
-    onFlee: ({ kind, pan }) => {
-        if (kind === "ember") sound.ghungroo({ pan, steps: 5, pace: 0.18, peak: 0.35 });
-        sound.gasp();
-    },
-});
-let readingInProgress = false;
+const TABS = {
+    today: { module: today, title: "Today" },
+    ask: { module: ask, title: "Ask" },
+    timeline: { module: timeline, title: "Timeline" },
+    family: { module: family, title: "Family" },
+    calendar: { module: calendar, title: "Calendar" },
+};
+const TOUR_KEY = "tarot_tour_seen";
+// Bump for a release worth a fresh look: everyone sees the tour once more
+const TOUR_VERSION = "4";
 
-// --- GATEKEEPER VALIDATION ---
+let currentTab = "today";
 
-async function verifyPinWithServer(pin) {
-    const res = await fetch("/api/verify-pin", {
-        method: "POST",
-        headers: { "x-app-pin": pin || "" },
-    });
-    return res.status;
-}
+const context = {
+    go,
+    pickPerson,
+    current: () => currentTab,
+};
 
-async function attemptUnlock() {
-    const pinInput = $("gatekeeper-pin");
-    const btn = $("unlock-btn");
-    const pin = pinInput.value.trim();
+// --- Tabs ---
 
-    // HTTP headers only carry plain ASCII; fetch would throw on anything else
-    if (/[^\x20-\x7E]/.test(pin)) {
-        showBlockerError("Use only plain letters, numbers and spaces.");
-        return;
+function go(tab, options = {}) {
+    if (!TABS[tab]) tab = "today";
+    currentTab = tab;
+    closeSheet();
+    for (const name of Object.keys(TABS)) {
+        $(`tab-${name}`).hidden = name !== tab;
+        const btn = $(`tab-btn-${name}`);
+        if (name === tab) btn.setAttribute("aria-current", "page");
+        else btn.removeAttribute("aria-current");
     }
-
-    $("blocker-error").style.display = "none";
-    btn.disabled = true;
-    btn.textContent = "VERIFYING...";
-
-    try {
-        const status = await verifyPinWithServer(pin);
-        if (status === 200) {
-            storage.set("tarot_pin", pin);
-            unlockUI();
-        } else if (status === 429) {
-            showBlockerError("Too many attempts. Wait a minute and try again.");
-        } else {
-            showBlockerError("Invalid passphrase. Access denied.");
-        }
-    } catch {
-        showBlockerError("Could not reach oracle server.");
-    } finally {
-        btn.disabled = false;
-        btn.textContent = "ENTER THE SANCTUM";
-    }
+    $("header-title").textContent = TABS[tab].title;
+    if (location.hash !== `#${tab}`) history.replaceState(null, "", `#${tab}`);
+    window.scrollTo(0, 0);
+    TABS[tab].module.render(options);
 }
 
-function showBlockerError(msg) {
-    const errEl = $("blocker-error");
-    errEl.textContent = msg;
-    errEl.style.display = "block";
-    const pinInput = $("gatekeeper-pin");
-    pinInput.value = "";
-    pinInput.focus();
+function renderHeader() {
+    const person = store.subject();
+    const fresh = avatar(person);
+    fresh.id = "person-avatar";
+    $("person-avatar").replaceWith(fresh);
+    $("person-name").textContent = person ? person.name : "Add someone";
 }
 
-function unlockUI() {
-    const blocker = $("blocker-screen");
-    blocker.style.opacity = "0";
-    setTimeout(() => {
-        blocker.style.visibility = "hidden";
-        blocker.style.display = "none";
-        sanctum.wake();
-        startOmens(sanctum, {
-            isQuiet: () => !readingInProgress && $("ritual").hidden,
+// Who Today, Ask and the Timeline are about
+function pickPerson() {
+    const people = store.people();
+    const subject = store.subject();
+    const list = el("div", "people");
+    for (const p of people) {
+        const card = button("", `person-card${subject?.id === p.id ? " selected" : ""}`, () => {
+            closeSheet();
+            store.setSubject(p.id);
         });
-        $("user-input").focus();
-        welcome();
-    }, 400);
+        const text = el("div", "grow");
+        text.append(el("div", "name", p.name), el("div", "meta", store.relationLabel(p.relation)));
+        card.append(avatar(p, "avatar big"), text);
+        list.append(card);
+    }
+    const add = button("+ Add someone", "btn wide", () => {
+        closeSheet();
+        family.openForm(null);
+    });
+    add.style.marginTop = "12px";
+    openSheet("Who is this for?", [list, add]);
 }
 
-// --- FIRST-RUN GUIDE ---
+// --- Settings ---
+
+function switchRow(label, on, onToggle) {
+    const row = el("div", "switch-row");
+    const sw = button("", "switch", () => {
+        const next = sw.getAttribute("aria-checked") !== "true";
+        sw.setAttribute("aria-checked", String(next));
+        onToggle(next);
+    });
+    sw.setAttribute("role", "switch");
+    sw.setAttribute("aria-checked", String(on));
+    sw.setAttribute("aria-label", label);
+    row.append(el("span", null, label), sw);
+    return row;
+}
+
+function segmented(options, current, onPick) {
+    const seg = el("div", "seg");
+    for (const [value, label] of options) {
+        const b = button(label, null, () => {
+            for (const x of seg.children) x.setAttribute("aria-pressed", String(x === b));
+            onPick(value);
+        });
+        b.setAttribute("aria-pressed", String(value === current));
+        seg.append(b);
+    }
+    return seg;
+}
+
+function openSettings() {
+    const group = (title, ...nodes) => {
+        const box = el("div", "settings-group");
+        box.append(el("strong", null, title), ...nodes);
+        return box;
+    };
+    const language = el("select", "input");
+    for (const [code, label] of store.LANGUAGES) {
+        const opt = el("option", null, label);
+        opt.value = code;
+        language.append(opt);
+    }
+    language.value = store.setting("language");
+    language.addEventListener("change", () => store.setSetting("language", language.value));
+
+    const here = store.here();
+    const place = el("div", "switch-row");
+    place.append(
+        el("span", null, here ? `📍 ${here.name}${here.assumed ? " (birth place)" : ""}` : "Not set"),
+        button("Change", "btn small ghost", choosePlace)
+    );
+
+    openSheet("Settings", [
+        group("Readings in", language, el("p", "hint", "The reader answers in this language.")),
+        group(
+            "Text size",
+            segmented([["normal", "A"], ["large", "A+"], ["larger", "A++"]], store.setting("textSize"), (v) => store.setSetting("textSize", v))
+        ),
+        group(
+            "Look",
+            segmented([["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]], store.setting("theme"), (v) => store.setSetting("theme", v))
+        ),
+        group(
+            "Experience",
+            switchRow("Sound (tanpura, bell)", sound.isEnabled(), (on) => sound.setEnabled(on)),
+            switchRow("Ritual before readings", store.setting("ritual") === "on", (on) => store.setSetting("ritual", on ? "on" : "off"))
+        ),
+        group("Where you are now", place, el("p", "hint", "Sunrise, Rahu Kaal and the calendar are worked out for this place.")),
+        group(
+            "More",
+            button("✦ How this works", "link-btn", () => {
+                closeSheet();
+                startTour();
+            }),
+            button("🔒 Lock the app", "link-btn", lock),
+            button("Erase everything on this device", "link-btn danger", async () => {
+                if (await confirmSheet("Erase everything?", "All people, birth details, events and readings on this device will be deleted.", "Erase", true)) {
+                    store.forgetEverything();
+                    toast("Everything was erased from this device");
+                    go("today");
+                }
+            })
+        ),
+    ]);
+}
+
+function choosePlace() {
+    let picked = null;
+    const picker = placePicker({ label: "Where you are now", locate: true, onChange: (p) => (picked = p) });
+    const save = button("Save", "btn wide", () => {
+        if (!picked) return toast("Choose a place first");
+        closeSheet();
+        store.setHere(picked);
+    });
+    openSheet("Where are you?", [picker.node, el("br"), save]);
+}
+
+function lock() {
+    storage.remove(PIN_KEY);
+    location.reload();
+}
+
+// --- First run and the tour ---
 
 function tourSteps() {
-    const hasProfile = !!profile.load();
     return [
         {
             target: null,
-            title: "Welcome to the sanctum",
+            title: "Welcome to Celestial",
             text:
-                "It is dark in here. Your lamp follows your finger or cursor, so carry it wherever " +
-                "you want to see. A quick look around takes half a minute.",
+                "Your family's almanac: today's panchang and Rahu Kaal, everyone's jataka, matching, " +
+                "muhurats and festivals, and a reader who answers your questions. A minute's look around.",
         },
         {
-            target: null,
-            title: "Watchers in the dark",
+            target: "#day-wheel",
+            title: "The day wheel",
             text:
-                "Not everything in this sanctum wishes you well. Eyes gather in the dark, drawn to " +
-                "your questions, and creep toward your reading. Carry your light to them (move your " +
-                "cursor, or tap near them) and they flee. Leave them watching when you ask, and they " +
-                "may cloud what the oracle sees. Listen for anklet bells. Not every pair means harm: " +
-                "the temple cat comes and goes as it pleases.",
+                "Sunrise on the left, sunset on the right. The day's choghadiyas arc over the top and the " +
+                "night's below: green is good, red is to avoid. Rahu Kaal is the red band outside, and the " +
+                "dot shows where you are in the day.",
         },
         {
-            target: ".input-bar",
-            title: "Ask your question",
-            text:
-                "Ask anything on your mind. The oracle decides how many cards it deserves: one for a " +
-                "simple question, three for most, the ten-card Celtic Cross for the deepest. Then ask " +
-                "follow-ups about the same cards, or start a ✦ New reading.",
+            target: "#person-btn",
+            title: "Who it's for",
+            text: "Switch between family members here. Today, Ask and the Timeline follow whoever you choose.",
         },
         {
-            target: "#oracle-picker",
-            title: "Choose your oracle",
+            target: "#tab-btn-ask",
+            title: "Ask",
             text:
-                "🃏 Cards are the tarot. 🐚 Kaudi casts cowrie shells into three heaps for what has " +
-                "been, what is, and what is coming. 🪐 Jataka answers from your own birth chart: the " +
-                "dasha you are in and the grahas moving over it. Or let the oracle choose.",
+                "Ask anything, about yourself or someone in the family. The reader reads their jataka for timing " +
+                "and the cards or cowries for guidance, in the language you choose.",
         },
         {
-            target: "#moon-label",
-            title: "Tonight's sky",
-            text:
-                "The real moon phase and astrological season colour every reading. ☿ ℞ appears when " +
-                "Mercury is retrograde. After midnight, the witching hour turns the sanctuary red.",
+            target: "#tab-btn-timeline",
+            title: "Timeline",
+            text: "A whole life, year by year: dashas, Sade Sati and Guru's transits. Add events and see how they line up.",
         },
         {
-            target: "#panchang-btn",
-            title: "🪔 Today's panchang",
-            text:
-                "Today's tithi, nakshatra, yoga and karana, read from the real sky. Tap it for the " +
-                "full panchang. The oracle weaves it into your readings.",
+            target: "#tab-btn-family",
+            title: "Family",
+            text: "Everyone's chart in the South Indian style, their doshas and yogas, and kundali matching.",
         },
         {
-            target: "#ritual-toggle",
-            title: "✦ The ritual",
-            text:
-                "Before a reading your question is carved into a sigil, then you breathe and cut the " +
-                "deck. Tap here to turn the ritual off and go straight to the cards.",
+            target: "#tab-btn-calendar",
+            title: "Calendar",
+            text: "Festivals, fasts, each person's important dates, and good days for new beginnings.",
         },
         {
-            target: "#sound-toggle",
-            title: "Sound",
-            text:
-                "Sound starts off. Turn it on for a low ambient drone and the sounds of shuffling " +
-                "and turning cards. Tap here any time to switch it.",
-            extra: sound.isEnabled()
-                ? undefined
-                : {
-                      label: "🔊 Turn sound on",
-                      doneLabel: "🔊 Sound is on",
-                      onClick: () => {
-                          sound.setEnabled(true);
-                          renderToggles();
-                      },
-                  },
+            target: "#settings-btn",
+            title: "Settings",
+            text: "Reading language, bigger text, dark or light, sound, and where you are.",
         },
-        {
-            target: "#daily-card-btn",
-            title: "Your card for today",
-            text: "A card drawn just for you. It stays the same all day and changes at midnight.",
-        },
-        {
-            target: "#jataka-btn",
-            title: "🪐 Your jataka",
-            text:
-                "With your birth time and place, your chart is drawn here in the South Indian style, " +
-                "with your dashas, Sade Sati, gochar, doshas and yogas.",
-        },
-        {
-            target: "#journal-btn",
-            title: "📖 Your journal",
-            text:
-                "Every reading is kept here, only on this device. The oracle remembers your last " +
-                "few and notices the cards that keep returning.",
-        },
-        hasProfile
-            ? {
-                  target: "#profile-btn",
-                  title: "☉ You",
-                  text:
-                      "Your rashi, nakshatra, signs, birth card and numbers live here, and you can " +
-                      "edit them any time. When one of your cards appears in a reading, it glows.",
-              }
-            : {
-                  target: "#profile-btn",
-                  title: "☉ Let the cards know you",
-                  text:
-                      "Share your birth date and the oracle will know your rashi, nakshatra, signs and " +
-                      "birth card. When one of your cards appears in a reading, it glows. It's optional " +
-                      "and stays on this device.",
-                  finish: [
-                      { label: "Tell the cards about me", action: "profile", primary: true },
-                      { label: "Maybe later", action: "done" },
-                  ],
-              },
     ];
 }
 
 async function startTour() {
-    const result = await runTour(tourSteps());
+    if (currentTab !== "today") go("today");
+    await sleep(800);
+    await runTour(tourSteps());
     storage.set(TOUR_KEY, TOUR_VERSION);
-    // The tour ends with the profile invitation, so don't pop the profile up separately
-    profile.markPrompted();
-    if (result === "profile") profile.openPanel(insights);
-    else $("user-input").focus();
 }
 
-// After unlocking: the guide once (including for people who unlocked before it existed),
-// otherwise the one-time profile invitation
-async function welcome() {
-    if (storage.get(TOUR_KEY) !== TOUR_VERSION) {
-        // Give the card of the day and the panchang a moment to load, so their steps can be shown
-        await Promise.race([Promise.all([insightsReady, skyReady]), sleep(1500)]);
-        startTour();
-    } else if (profile.shouldPrompt()) {
-        profile.openPanel(insights);
-        profile.markPrompted();
-    }
-}
-
-function relockSanctuary() {
-    storage.remove("tarot_pin");
-    location.reload();
-}
-
-// --- ATMOSPHERE: moon, witching hour, toggles ---
-
-async function loadSky() {
-    try {
-        const res = await fetch(`/api/sky?local_date=${profile.localDate()}`);
-        if (!res.ok) return;
-        const { moon, season, mercury_retrograde, panchang: today } = await res.json();
-        panchang.show(today);
-        if (today?.tithi.number === 30) applyAmavasya();
-        $("moon-emoji").textContent = moon.emoji;
-        $("moon-name").textContent = `${moon.name} · ${season} season`;
-        $("moon-label").title = `Tonight's moon: ${moon.name}. The Sun is in ${season}.`;
-        $("retrograde-badge").hidden = !mercury_retrograde;
-        sky.setMoon(moon.fraction);
-    } catch {
-        /* the sky simply has no moon tonight */
-    }
-}
-
-// Signs and numbers for the profile panel, and the card of the day
-async function loadInsights() {
-    try {
-        const res = await fetch("/api/insights", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ profile: profile.toRequest(), local_date: profile.localDate() }),
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        insights = data.insights;
-        dailyCard = data.daily_card;
-        $("daily-card-btn").hidden = !dailyCard;
-        $("jataka-btn").hidden = false;
-    } catch {
-        /* the profile panel just won't show derived insights */
-    }
-}
-
-function applyWitchingHour() {
-    if (!WITCHING_HOURS.includes(new Date().getHours())) return;
-    document.body.classList.add("witching");
-    $("tagline").textContent = "The witching hour is upon you. The veil is thin…";
-    sky.setMood("witching");
-    sanctum.setMood("witching");
-}
-
-// A moonless night: the sanctum grows darker, and more things watch
-function applyAmavasya() {
-    document.body.classList.add("amavasya");
-    sanctum.setDepth("amavasya");
-    if (!document.body.classList.contains("witching")) {
-        $("tagline").textContent = "Amavasya. No moon tonight, and the lamps burn low…";
-    }
-}
-
-function renderToggles() {
-    const on = sound.isEnabled();
-    const soundBtn = $("sound-toggle");
-    soundBtn.setAttribute("aria-pressed", String(on));
-    soundBtn.querySelector(".pill-icon").textContent = on ? "🔊" : "🔇";
-    soundBtn.querySelector(".pill-label").textContent = on ? "Sound on" : "Sound off";
-
-    const ritualBtn = $("ritual-toggle");
-    ritualBtn.setAttribute("aria-pressed", String(ritualEnabled));
-    ritualBtn.querySelector(".pill-label").textContent = ritualEnabled ? "Ritual on" : "Ritual off";
-}
-
-function setCardsOnTable(value) {
-    cardsOnTable = value;
-    $("new-reading-btn").hidden = !value;
-    // The oracle is chosen for a new question only
-    $("oracle-picker").hidden = value;
-    $("user-input").placeholder = value ? FOLLOW_UP_PLACEHOLDER : PLACEHOLDERS[oracle];
-}
-
-function renderOracle() {
-    for (const btn of $("oracle-picker").querySelectorAll("button")) {
-        btn.setAttribute("aria-pressed", String(btn.dataset.oracle === oracle));
-    }
-    if (!cardsOnTable) $("user-input").placeholder = PLACEHOLDERS[oracle];
-}
-
-// Clear the table so the next question draws fresh cards
-function startNewReading() {
-    clearSpread($("cards-tray"), $("spread-legend"));
-    $("tldr-box").style.display = "none";
-    $("chat-output").replaceChildren(el("em", null, INTRO_TEXT));
-    history.length = 0;
-    setCardsOnTable(false);
-    $("user-input").focus();
-}
-
-// --- MAIN TAROT INQUIRY FLOW ---
-
-async function fetchReading(message, newReading, watched) {
-    const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "x-app-pin": storage.get("tarot_pin") || "",
-        },
-        body: JSON.stringify({
-            message,
-            history,
-            new_reading: newReading,
-            oracle,
-            watched,
-            local_hour: new Date().getHours(),
-            local_date: profile.localDate(),
-            profile: profile.toRequest(),
-            recent_readings: journal.recentForOracle(),
+function welcome() {
+    const box = el("div", "empty");
+    box.append(
+        kolam({ petals: 12 }),
+        el("p", null, "Start with your own birth details. Then add your family: parents, children, anyone you ask about."),
+        button("Add yourself", "btn", () => {
+            closeSheet();
+            family.openForm(null, { relation: "self" });
         }),
-    });
-
-    if (res.status === 401) {
-        relockSanctuary();
-        throw new Error("Your access PIN is no longer valid.");
-    }
-    if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        // 422 validation errors return `detail` as a list, not a string
-        const detail = typeof errData.detail === "string" ? errData.detail : null;
-        throw new Error(detail || `Server error (${res.status})`);
-    }
-    return res.json();
-}
-
-function showShuffler() {
-    $("shuffler").style.display = "flex";
-    sound.shuffle();
-    // Matches the 1.2s CSS shuffle cycle
-    return setInterval(sound.shuffle, 1200);
-}
-
-function hideShuffler(timer) {
-    clearInterval(timer);
-    $("shuffler").style.display = "none";
-}
-
-// The jataka oracle needs a chart; offer to add the birth time and place instead
-function askForBirthDetails() {
-    const add = el("button", "btn-link", "Add your birth time and place");
-    add.type = "button";
-    add.addEventListener("click", () => profile.openPanel(insights, { edit: true }));
-    const note = el("p", null, "Your jataka needs your birth time and birth place. ");
-    note.append(add);
-    $("chat-output").replaceChildren(note);
-}
-
-async function sendInquiry() {
-    const input = $("user-input");
-    const btn = $("send-btn");
-    const chat = $("chat-output");
-    const tldrBox = $("tldr-box");
-    const text = input.value.trim();
-    if (!text) return;
-
-    const newReading = !cardsOnTable;
-    if (newReading && oracle === "jataka") {
-        await insightsReady;
-        if (!insights?.jataka) {
-            askForBirthDetails();
-            return;
-        }
-    }
-    readingInProgress = true;
-    // A watcher left in the dark as the question is asked clouds the reading
-    const watched = newReading && sanctum.isWatched();
-    btn.disabled = true;
-    input.disabled = true;
-    tldrBox.style.display = "none";
-    if (newReading) {
-        clearSpread($("cards-tray"), $("spread-legend"));
-        sound.startHeartbeat();
-    }
-    chat.replaceChildren(
-        el("span", "status-msg", newReading ? WAITING[oracle] : "The oracle contemplates your reading...")
+        button("Look around first", "link-btn", closeSheet)
     );
-    if (watched) chat.append(el("span", "watched-note", " Something is watching."));
+    openSheet("Namaste 🙏", box);
+}
 
-    // Start the reading now; the ritual plays while it is on its way
-    const reading = fetchReading(text, newReading, watched).then(
-        (data) => ({ data }),
-        (error) => ({ error })
-    );
+// --- The gate ---
 
-    // Which oracle the reading used, so an "auto" ritual can end with the right gesture
-    const chosen = reading.then(({ data }) =>
-        data?.kaudi ? "kaudi" : data?.cards?.length ? "tarot" : data?.jataka ? "jataka" : null
-    );
-    if (newReading && ritualEnabled) await runRitual(text, { oracle, chosen });
+async function unlock() {
+    const gate = $("gate");
+    gate.style.opacity = "0";
+    $("app").hidden = false;
+    setTimeout(() => (gate.hidden = true), 400);
+    const tab = location.hash.slice(1);
+    go(TABS[tab] ? tab : "today");
+    renderHeader();
+    if (storage.get(TOUR_KEY) !== TOUR_VERSION) await startTour();
+    if (!store.people().length) welcome();
+}
 
-    // The deck is shuffled only when it is known to be the cards
-    const shuffleTimer = newReading && oracle === "tarot" ? showShuffler() : null;
-    const { data, error } = await reading;
-    hideShuffler(shuffleTimer);
-
+async function tryPin(pin) {
+    if (/[^\x20-\x7E]/.test(pin)) {
+        $("gate-error").textContent = "Use only plain letters, numbers and spaces.";
+        return;
+    }
+    $("gate-btn").disabled = true;
     try {
-        if (error) throw error;
-
-        if (data.cards && data.cards.length > 0) {
-            await revealSpread($("cards-tray"), $("spread-legend"), data.cards, data.spread, {
-                onFlip: (i) => {
-                    sound.flip();
-                    sound.quickenHeartbeat();
-                    sanctum.flare();
-                    if (data.cards[i].personal) {
-                        sound.personal();
-                        buzz([15, 80, 30]);
-                    } else {
-                        buzz(15);
-                    }
-                },
-            });
+        const status = await verifyPin(pin);
+        if (status === 200) {
+            storage.set(PIN_KEY, pin);
+            unlock();
+        } else if (status === 429) {
+            $("gate-error").textContent = "Too many attempts. Wait a minute and try again.";
+        } else {
+            $("gate-error").textContent = "That isn't the passphrase.";
+            $("gate-pin").value = "";
         }
-
-        if (data.kaudi) {
-            await revealKaudi($("cards-tray"), $("spread-legend"), data.kaudi, {
-                onCast: () => {
-                    sound.cowries();
-                    sound.quickenHeartbeat(10);
-                    sanctum.flare();
-                    buzz([10, 40, 10]);
-                },
-                onCount: sound.tick,
-            });
-        }
-        // A new jataka reading puts the chart on the table (a follow-up leaves the table be)
-        const readJataka = newReading && data.jataka && insights?.jataka;
-        if (readJataka) {
-            await revealJatakaChart(data.jataka);
-        }
-        sound.stopHeartbeat();
-        if (watched) {
-            $("spread-legend").append(el("li", "watched-note", "👁 Something watched this reading. Trust what rings true."));
-        }
-
-        if (data.tldr) {
-            $("tldr-text").textContent = data.tldr;
-            tldrBox.style.display = "block";
-            sound.chime();
-        }
-
-        chat.replaceChildren(el("div", "narrative", data.reply));
-        chat.scrollTop = 0;
-
-        history.push({ role: "user", content: text });
-        history.push({
-            role: "assistant",
-            content: (data.tldr ? `[TL;DR: ${data.tldr}]\n` : "") + data.reply,
-        });
-        if (history.length > MAX_HISTORY_MESSAGES) {
-            history.splice(0, history.length - MAX_HISTORY_MESSAGES);
-        }
-
-        if (data.cards?.length || data.kaudi || readJataka) {
-            journal.add({
-                date: profile.localDate(),
-                question: text,
-                spread: data.spread,
-                cards: data.cards || [],
-                kaudi: data.kaudi?.heaps || null,
-                jataka: readJataka ? [data.jataka.mahadasha, data.jataka.antardasha].join("–") : null,
-                tldr: data.tldr,
-            });
-            setCardsOnTable(true);
-        }
-    } catch (err) {
-        chat.replaceChildren(el("span", "error-text", `Oracle disrupted: ${err.message}`));
+    } catch {
+        $("gate-error").textContent = "Couldn't reach the server.";
     } finally {
-        readingInProgress = false;
-        sound.stopHeartbeat();
-        btn.disabled = false;
-        input.disabled = false;
-        input.value = "";
-        input.focus();
+        $("gate-btn").disabled = false;
     }
 }
 
-function revealJatakaChart(dasha) {
-    return jataka.revealJataka($("cards-tray"), $("spread-legend"), insights.jataka, dasha, {
-        onPlace: () => {
-            sound.tick();
-            sound.quickenHeartbeat(4);
-            buzz(8);
-        },
-    }).then(() => sanctum.flare());
+// --- Wiring ---
+
+initSheet();
+for (const name of Object.keys(TABS)) {
+    TABS[name].module.init?.(context);
+    $(`tab-btn-${name}`).addEventListener("click", () => go(name));
 }
-
-// --- WHILE YOU WERE AWAY ---
-// Leave the tab for a while and come back: the lamp has guttered, a line has changed,
-// and if cards are on the table, one of them has moved.
-
-const AWAY_SECONDS = 20;
-const AWAY_LINES = [
-    "You left. The cards didn't.",
-    "Something turned in the dark while you were gone.",
-    "The lamp burned lower while you were away.",
-    "We kept your place. Something else sat in it for a while.",
-    "You were missed. Not only by us.",
-    "The shells shifted while no one was looking.",
-];
-let awayAt = null;
-
-function onReturn() {
-    // Not while the sanctum is still sealed
-    if ($("blocker-screen").style.display !== "none") return;
-    const tagline = $("tagline");
-    const lines = AWAY_LINES.filter((l) => l !== tagline.textContent);
-    tagline.textContent = lines[Math.floor(Math.random() * lines.length)];
-    tagline.classList.remove("uncanny");
-    void tagline.offsetWidth; // restart the flicker
-    tagline.classList.add("uncanny");
-
-    const cards = [...document.querySelectorAll("#cards-tray .tarot-card, #cards-tray .kaudi-heap, #cards-tray .south-chart")];
-    if (cards.length) {
-        const moved = cards[Math.floor(Math.random() * cards.length)];
-        moved.style.setProperty("--nudge", `${(Math.random() < 0.5 ? -1 : 1) * (1 + Math.random())}deg`);
-        moved.classList.add("nudged");
-    }
-    sanctum.relight();
-    sound.breath({ inhale: true, seconds: 2.4, peak: 0.05 });
-}
-
-document.addEventListener("visibilitychange", () => {
-    if (document.hidden) {
-        awayAt = Date.now();
-    } else if (awayAt && Date.now() - awayAt > AWAY_SECONDS * 1000) {
-        awayAt = null;
-        // After the audio context resumes
-        setTimeout(onReturn, 300);
-    }
-});
-
-// --- WIRING ---
-
-$("unlock-btn").addEventListener("click", attemptUnlock);
-$("gatekeeper-pin").addEventListener("keypress", (e) => {
-    if (e.key === "Enter") attemptUnlock();
-});
-$("lock-btn").addEventListener("click", relockSanctuary);
-$("send-btn").addEventListener("click", sendInquiry);
-$("user-input").addEventListener("keypress", (e) => {
-    if (e.key === "Enter") sendInquiry();
-});
-// Writing a question draws the watchers
-$("user-input").addEventListener("input", () => sanctum.beckon());
-
-$("sound-toggle").addEventListener("click", () => {
-    sound.setEnabled(!sound.isEnabled());
-    renderToggles();
-});
-$("ritual-toggle").addEventListener("click", () => {
-    ritualEnabled = !ritualEnabled;
-    storage.set("tarot_ritual", ritualEnabled ? "on" : "off");
-    renderToggles();
-});
-$("new-reading-btn").addEventListener("click", startNewReading);
-$("oracle-picker").addEventListener("click", (e) => {
-    const choice = e.target.closest("button")?.dataset.oracle;
-    if (!choice) return;
-    oracle = choice;
-    storage.set("tarot_oracle", oracle);
-    renderOracle();
-});
-
+$("person-btn").addEventListener("click", pickPerson);
+$("settings-btn").addEventListener("click", openSettings);
 $("lightbox").addEventListener("click", closeLightbox);
+$("gate-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    tryPin($("gate-pin").value.trim());
+});
 document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
-    // Close the topmost layer only: an info popover, then the card view (which can sit
-    // above the journal), then panels
-    if (infotip.close()) return;
     if (closeLightbox()) return;
-    profile.closePanel();
-    journal.closePanel();
-    panchang.closePanel();
-    jataka.closePanel();
+    closeSheet();
 });
 
-$("profile-btn").addEventListener("click", () => profile.openPanel(insights));
-$("journal-btn").addEventListener("click", journal.openPanel);
-$("jataka-btn").addEventListener("click", () =>
-    jataka.openPanel(insights?.jataka || null, {
-        onAddDetails: () => {
-            jataka.closePanel();
-            profile.openPanel(insights, { edit: true });
-        },
-    })
-);
-$("tour-btn").addEventListener("click", startTour);
-$("daily-card-btn").addEventListener("click", () => dailyCard && openLightbox(dailyCard));
-
-profile.initPanel({
-    onSaved: async () => {
-        await loadInsights();
-        profile.showPortrait(insights, { celebrate: true });
-        sound.chime();
-    },
-    onCardClick: openLightbox,
-    onForget: async () => {
-        profile.forget();
-        journal.forget();
-        await loadInsights();
-        profile.closePanel();
-        startNewReading();
-        $("chat-output").replaceChildren(
-            el("em", null, "Your profile and journal have been erased from this device.")
-        );
-    },
+store.onChange((what) => {
+    if (what === "people" || what === "subject") renderHeader();
+    if (what === "settings") return;
+    if (what === "here" && !["today", "calendar"].includes(currentTab)) return;
+    TABS[currentTab].module.render({ keep: true });
 });
-journal.initPanel({ onCardClick: openLightbox });
-panchang.initPanel();
-jataka.initPanel();
 
 // Browsers only allow audio after a user gesture
 document.addEventListener("pointerdown", sound.onUserGesture, { once: true });
 document.addEventListener("keydown", sound.onUserGesture, { once: true });
 
-renderToggles();
-renderOracle();
-startNewReading();
-applyWitchingHour();
-skyReady = loadSky();
-insightsReady = loadInsights();
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+}
 
+drawKolam($("gate-kolam"), { petals: 8 });
 (async () => {
-    const storedPin = storage.get("tarot_pin");
-    if (storedPin) {
-        try {
-            if ((await verifyPinWithServer(storedPin)) === 200) {
-                unlockUI();
-                return;
-            }
-        } catch {
-            /* fall through to the PIN prompt */
+    const pin = storage.get(PIN_KEY);
+    try {
+        // With no passphrase configured on the server, any (or no) passphrase opens it
+        if ((await verifyPin(pin || "")) === 200) {
+            unlock();
+            return;
         }
+    } catch {
+        /* show the gate */
     }
-    $("gatekeeper-pin").focus();
+    $("gate-pin").focus();
 })();

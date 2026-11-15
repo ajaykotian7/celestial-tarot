@@ -426,6 +426,33 @@ def _sade_sati(moon_sign: int, birth: date, today: date) -> Dict[str, Any]:
     }
 
 
+def guru_periods(moon_sign: int, birth: date, years: int = 100) -> List[Dict[str, Any]]:
+    """Guru's passage through the signs over a lifetime, counted from the birth Moon.
+    The 2nd, 5th, 7th, 9th and 11th from the Moon are traditionally favourable."""
+    last = birth + timedelta(days=int(years * 365.25))
+    periods = []
+    for start, end, sign in _spans("jupiter"):
+        if end <= birth or start > last:
+            continue
+        house = house_from(sign, moon_sign)
+        periods.append(
+            {
+                "start": start,
+                "end": end,
+                "sign": sign,
+                "rashi": rashi_of(sign * 30)["name"],
+                "from_moon": house,
+                "favourable": house in (2, 5, 7, 9, 11),
+            }
+        )
+    return periods
+
+
+def moon_timeline(moon_sign: int, birth: date, today: date) -> Dict[str, Any]:
+    """The transits that need only the birth Moon's sign: Sade Sati, Dhaiya and Guru."""
+    return {"sade_sati": _sade_sati(moon_sign, birth, today), "guru": guru_periods(moon_sign, birth)}
+
+
 # --- Doshas ---
 
 
@@ -818,6 +845,8 @@ def _jataka(
         "sade_sati": sade_sati,
         "doshas": doshas(chart, sade_sati),
         "yogas": yogas(chart),
+        # The houses each graha rules, counted from the lagna
+        "lordships": house_lordships(chart["lagna"]["sign"]),
         "conventions": "Lahiri ayanamsa, mean Rahu and Ketu, whole-sign houses, 365.25-day dasha years",
     }
 

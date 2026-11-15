@@ -275,7 +275,7 @@ def test_new_reading_forces_a_draw_sized_by_the_model(http, monkeypatch, spread_
     assert len(body["cards"]) == count
     assert body["cards"][0]["image"].startswith("/static/cards/")
     expected_tokens = (
-        app_module.CELTIC_CROSS_COMPLETION_TOKENS
+        app_module.LONG_COMPLETION_TOKENS
         if spread_type == "celtic_cross"
         else app_module.MAX_COMPLETION_TOKENS
     )
@@ -328,17 +328,6 @@ def test_auto_oracle_lets_the_model_choose_one(http, monkeypatch):
     assert len(body["cards"]) == 1 and body["kaudi"] is None
 
 
-@pytest.mark.parametrize(
-    "watched, new_reading, mentioned",
-    [(True, True, True), (False, True, False), (True, False, False)],
-)
-def test_watched_readings_get_one_gentle_line(http, monkeypatch, watched, new_reading, mentioned):
-    responses = [draw_call("single_card"), completion("ok")] if new_reading else [completion("ok")]
-    completions = fake_openai(monkeypatch, *responses)
-    chat(http, new_reading=new_reading, watched=watched)
-    assert (app_module.WATCHED_PROMPT in system_prompt_of(completions)) is mentioned
-
-
 def test_rejects_unknown_oracle(http, monkeypatch):
     fake_openai(monkeypatch, completion("ok"))
     assert chat(http, new_reading=True, oracle="ouija").status_code == 422
@@ -371,20 +360,6 @@ def test_system_prompt_mentions_moon_phase(http, monkeypatch):
     chat(http)
     moon = app_module.moon_phase()["name"]
     assert moon in completions.calls[0]["messages"][0]["content"]
-
-
-@pytest.mark.parametrize("hour, witching", [(0, True), (3, True), (4, False), (23, False), (None, False)])
-def test_witching_hour_changes_the_tone(http, monkeypatch, hour, witching):
-    completions = fake_openai(monkeypatch, completion("ok"))
-    chat(http, local_hour=hour)
-    system = completions.calls[0]["messages"][0]["content"]
-    assert (app_module.WITCHING_HOUR_PROMPT in system) is witching
-
-
-@pytest.mark.parametrize("hour", [-1, 24, "midnight"])
-def test_rejects_invalid_local_hour(http, monkeypatch, hour):
-    fake_openai(monkeypatch, completion("ok"))
-    assert chat(http, local_hour=hour).status_code == 422
 
 
 def test_sky_endpoint(http):
@@ -564,26 +539,21 @@ def test_insights_without_profile_still_gives_a_daily_card(http):
     assert body["daily_card"]["card"]
 
 
-# --- The jataka oracle ---
-
-
-def jataka_call(call_id="call_1"):
-    return completion(tool_calls=[tool_call(call_id, "consult_jataka", "{}")])
+# --- The jataka, topics, languages and family ---
 
 
 def test_jataka_oracle_reads_a_summary_never_the_birth_details(http, monkeypatch):
-    completions = fake_openai(monkeypatch, jataka_call(), completion("The grahas speak."))
+    completions = fake_openai(monkeypatch, completion("The grahas speak."))
 
     body = chat(http, new_reading=True, oracle="jataka", profile=PROFILE, local_date="2026-11-15").json()
 
-    first, second = completions.calls
-    assert first["tool_choice"] == {"type": "function", "function": {"name": "consult_jataka"}}
-    assert app_module.NEW_READING_PROMPTS["jataka"] in first["messages"][0]["content"]
-    # Every reading knows the running dasha in one line
-    assert "running Chandra mahadasha" in first["messages"][0]["content"]
-    summary = json.loads(second["messages"][-1]["content"])["jataka"]
-    assert "Tula (Libra)" in summary and "Sade Sati is running" in summary
-    sent = json.dumps([m for m in second["messages"] if isinstance(m, dict)])
+    (only,) = completions.calls
+    # The jataka is already in the prompt, so no tool and a single completion
+    assert "tools" not in only
+    system = only["messages"][0]["content"]
+    assert app_module.JATAKA_ONLY in system and app_module.JATAKA_GUIDE in system
+    assert "Tula (Libra)" in system and "Sade Sati is running" in system
+    sent = json.dumps(only["messages"])
     for private in ("1990", "07-15", "14:30", "19.07", "72.88", "Kolkata", "°"):
         assert private not in sent
     assert body["jataka"] == {
@@ -602,25 +572,88 @@ def test_jataka_oracle_without_birth_time_asks_for_it_and_spends_nothing(http, m
     assert completions.calls == []
 
 
-@pytest.mark.parametrize("profile, offered", [(PROFILE, True), (None, False)])
-def test_auto_offers_the_jataka_only_to_those_who_have_one(http, monkeypatch, profile, offered):
+def test_letting_the_reader_decide_reads_the_jataka_with_the_cards(http, monkeypatch):
     completions = fake_openai(monkeypatch, draw_call("single_card"), completion("ok"))
 
-    chat(http, new_reading=True, profile=profile, local_date="2026-11-15")
+    body = chat(http, new_reading=True, profile=PROFILE, local_date="2026-11-15").json()
 
     first = completions.calls[0]
-    names = {t["function"]["name"] for t in first["tools"]}
-    assert ("consult_jataka" in names) is offered
-    assert (app_module.AUTO_JATAKA in first["messages"][0]["content"]) is offered
+    assert {t["function"]["name"] for t in first["tools"]} == {"draw_spread", "cast_kaudi"}
+    system = first["messages"][0]["content"]
+    assert app_module.COMBINED_READING in system and "Their jataka (a summary in words)" in system
+    assert len(body["cards"]) == 1 and body["jataka"]["mahadasha"] == "Chandra"
 
 
-def test_follow_ups_can_consult_the_jataka(http, monkeypatch):
-    completions = fake_openai(monkeypatch, jataka_call(), completion("ok"))
+def test_without_a_jataka_the_reader_just_draws(http, monkeypatch):
+    completions = fake_openai(monkeypatch, draw_call("single_card"), completion("ok"))
+
+    body = chat(http, new_reading=True).json()
+
+    assert app_module.COMBINED_READING not in system_prompt_of(completions)
+    assert body["jataka"] is None
+
+
+def test_cards_alone_get_only_the_one_line_jataka(http, monkeypatch):
+    completions = fake_openai(monkeypatch, draw_call("single_card"), completion("ok"))
+
+    body = chat(http, new_reading=True, oracle="tarot", profile=PROFILE, local_date="2026-11-15").json()
+
+    system = system_prompt_of(completions)
+    assert "running Chandra mahadasha" in system
+    assert "Their jataka (a summary in words)" not in system
+    assert body["jataka"] is None
+
+
+def test_follow_ups_know_the_jataka(http, monkeypatch):
+    completions = fake_openai(monkeypatch, completion("ok"))
 
     body = chat(http, profile=PROFILE, local_date="2026-11-15").json()
 
-    assert "consult_jataka" in {t["function"]["name"] for t in completions.calls[0]["tools"]}
-    assert body["jataka"]["mahadasha"] == "Chandra"
+    assert "Their jataka (a summary in words)" in system_prompt_of(completions)
+    # Nothing new was read, so nothing new goes on the table
+    assert body["jataka"] is None
+
+
+def test_topic_language_and_asking_about_someone_else(http, monkeypatch):
+    completions = fake_openai(monkeypatch, completion("ok"))
+    son = {**PROFILE, "name": "Rahul", "relation": "son"}
+
+    chat(http, profile=son, asker="Asha", topic="marriage", language="kn")
+
+    system = system_prompt_of(completions)
+    assert "The question is about marriage." in system
+    assert "in Kannada, in its own script" in system
+    assert "Asha is asking about their son, Rahul. Speak to Asha, about Rahul" in system
+
+
+def test_asking_about_yourself_needs_no_go_between(http, monkeypatch):
+    completions = fake_openai(monkeypatch, completion("ok"))
+    chat(http, profile={**PROFILE, "relation": "self"}, asker="Ajay")
+    assert "is asking about their" not in system_prompt_of(completions)
+
+
+@pytest.mark.parametrize("body", [{"topic": "lottery"}, {"language": "fr"}])
+def test_rejects_unknown_topic_or_language(http, monkeypatch, body):
+    fake_openai(monkeypatch, completion("ok"))
+    assert chat(http, **body).status_code == 422
+
+
+def test_life_events_reach_the_model(http, monkeypatch):
+    completions = fake_openai(monkeypatch, completion("ok"))
+    events = [{"when": "2019-06", "label": "changed jobs"}, {"when": "2015", "label": "married"}]
+
+    chat(http, profile={**PROFILE, "events": events})
+
+    assert "Events in their life they have shared: 2015: married; 2019-06: changed jobs" in (
+        system_prompt_of(completions)
+    )
+
+
+@pytest.mark.parametrize("when", ["15", "2015-6", "June 2015", "2015-06-01"])
+def test_rejects_badly_dated_life_events(http, monkeypatch, when):
+    fake_openai(monkeypatch, completion("ok"))
+    profile = {**PROFILE, "events": [{"when": when, "label": "married"}]}
+    assert chat(http, profile=profile).status_code == 422
 
 
 def test_jataka_journal_entries_reach_the_model(http, monkeypatch):
@@ -692,3 +725,84 @@ def test_openai_key_and_credit_problems_are_named_without_details(http, monkeypa
     assert res.status_code == 503
     assert res.json()["detail"] == message
     assert "secret" not in res.text
+
+
+# --- Today, the calendar, muhurats and matching ---
+
+MUMBAI = {"latitude": 19.07, "longitude": 72.88, "timezone": "Asia/Kolkata"}
+
+
+def post(http, path, body, pin=PIN):
+    return http.post(path, json=body, headers={"x-app-pin": pin})
+
+
+@pytest.mark.parametrize(
+    "path, body",
+    [
+        ("/api/day", {"place": MUMBAI, "local_date": "2026-11-15"}),
+        ("/api/calendar", {"place": MUMBAI, "start": "2026-11-15"}),
+        ("/api/muhurat", {"place": MUMBAI, "start": "2026-11-15", "activity": "work"}),
+        ("/api/match", {"bride": PROFILE, "groom": PROFILE}),
+    ],
+)
+def test_almanac_endpoints_need_the_pin(http, path, body):
+    assert post(http, path, body, pin="wrong").status_code == 401
+
+
+def test_day_for_a_person(http):
+    body = post(http, "/api/day", {"place": MUMBAI, "local_date": "2026-11-15", "profile": PROFILE}).json()
+    assert body["sunrise"].startswith("2026-11-15T06:45")
+    assert body["periods"]["rahu_kaal"]["start"].startswith("2026-11-15T16:3")
+    assert len(body["periods"]["choghadiya"]) == 16
+    assert body["panchang"]["vara"]["name"] == "Ravivara"
+    assert body["personal"]["guidance"]
+    assert body["dasha"]["mahadasha"] == "Chandra"
+    assert body["sade_sati"]["phase"] == "peak"
+    assert body["daily_card"]["card"]
+
+
+def test_day_without_a_person(http):
+    body = post(http, "/api/day", {"place": MUMBAI, "local_date": "2024-10-31"}).json()
+    assert body["personal"] is None and body["dasha"] is None
+    assert any(i["name"] == "Deepavali (Lakshmi Puja)" for i in body["today"])
+    assert any(
+        i["name"] == "Bhai Dooj" for day in body["coming"] for i in day["items"]
+    )
+
+
+def test_calendar_with_personal_events(http):
+    body = post(
+        http, "/api/calendar", {"place": MUMBAI, "start": "2027-06-01", "days": 10, "profile": PROFILE}
+    ).json()
+    assert len(body["days"]) == 10
+    names = [i["name"] for d in body["days"] for i in d["items"]]
+    # Shani enters Mesha in June 2027: for a Meena Moon, Sade Sati moves on
+    assert "Shani enters Mesha" in names
+
+
+def test_calendar_caps_its_length(http):
+    assert post(http, "/api/calendar", {"place": MUMBAI, "start": "2026-11-15", "days": 400}).status_code == 422
+
+
+def test_muhurat_endpoint(http):
+    body = post(
+        http, "/api/muhurat",
+        {"place": MUMBAI, "start": "2026-11-15", "days": 30, "activity": "travel", "profile": PROFILE},
+    ).json()
+    assert body["label"] == "Begin a journey" and body["days"]
+    assert post(http, "/api/muhurat", {"place": MUMBAI, "start": "2026-11-15", "activity": "war"}).status_code == 422
+
+
+def test_match_endpoint(http):
+    groom = {**PROFILE, "name": "Ajay"}
+    bride = {"name": "Meera", "birth_date": "1992-03-08", "birth_time": "09:15", "timezone": "Asia/Kolkata",
+             "latitude": 12.97, "longitude": 77.59}
+    body = post(http, "/api/match", {"bride": bride, "groom": groom}).json()
+    assert len(body["kootas"]) == 8 and 0 <= body["total"] <= 36
+    assert body["approximate"] is False
+    assert body["mangal"]["groom"]["status"] == "cancelled"
+
+
+def test_match_without_a_birth_date_explains(http):
+    res = post(http, "/api/match", {"bride": {"name": "Meera"}, "groom": PROFILE})
+    assert res.status_code == 422 and "Meera" in res.json()["detail"]

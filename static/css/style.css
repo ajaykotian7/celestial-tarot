@@ -1,26 +1,97 @@
-/* The inner sanctum of an old temple: basalt, smoke, bronze and lamplight */
+/* Celestial: a family almanac in the colours of a printed panchang. Cream paper,
+   kumkum red, turmeric gold and indigo ink, on a faint grid of kolam dots. */
 :root {
-    --bg: #070504;
-    --bg-top: #1e130a;
-    --card-bg: #18110b;
-    --accent: #d4af37;
-    --accent-glow: rgba(212, 175, 55, 0.35);
-    --candle: rgba(255, 160, 60, 0.18);
-    --mist: rgba(160, 130, 100, 0.09);
-    --text: #ece4d6;
-    --text-muted: #a99d89;
-    --danger: #ff6b6b;
+    --paper: #f6efe2;
+    --paper-2: #ece0c9;
+    --card: #fffaf0;
+    --ink: #2a1c13;
+    --ink-soft: #6c5847;
+    --line: rgba(42, 28, 19, 0.13);
+    --kumkum: #b4351c;
+    --kumkum-soft: rgba(180, 53, 28, 0.1);
+    --haldi: #d99a12;
+    --haldi-soft: rgba(217, 154, 18, 0.16);
+    --indigo: #2f3a7a;
+    --indigo-soft: rgba(47, 58, 122, 0.1);
+    --leaf: #2e7d4f;
+    --leaf-soft: rgba(46, 125, 79, 0.13);
+    --caution: #c2552e;
+    --caution-soft: rgba(194, 85, 46, 0.12);
+    --personal-ink: #8a5a00;
+    --dot: rgba(42, 28, 19, 0.09);
+    --shadow: 0 1px 2px rgba(42, 28, 19, 0.06), 0 8px 24px rgba(42, 28, 19, 0.08);
+    --radius: 16px;
+    --font-body: 'Mukta', system-ui, -apple-system, sans-serif;
+    --font-display: 'Rozha One', Georgia, serif;
+    --font-deva: 'Tiro Devanagari Sanskrit', 'Mukta', serif;
+    --tabbar-h: 66px;
+
+    /* Names the reading table, ritual and tour styles use */
+    --bg: var(--paper);
+    --card-bg: var(--card);
+    --text: var(--ink);
+    --text-muted: var(--ink-soft);
+    --accent: var(--kumkum);
+    --accent-glow: rgba(217, 154, 18, 0.35);
     --card-ratio: 400 / 680;
+    color-scheme: light;
 }
 
-/* After midnight the palette turns blood-red */
-body.witching {
-    --bg: #08040a;
-    --bg-top: #2a0d1a;
-    --accent: #d8a446;
-    --accent-glow: rgba(200, 40, 70, 0.4);
-    --candle: rgba(220, 50, 70, 0.16);
-    --mist: rgba(170, 40, 70, 0.12);
+:root[data-theme="dark"] {
+    --paper: #15151f;
+    --paper-2: #1d1d2b;
+    --card: #21212f;
+    --ink: #f2e9d8;
+    --ink-soft: #b8aa93;
+    --line: rgba(242, 233, 216, 0.13);
+    --kumkum: #f07c58;
+    --kumkum-soft: rgba(240, 124, 88, 0.14);
+    --haldi: #f0b740;
+    --haldi-soft: rgba(240, 183, 64, 0.16);
+    --indigo: #a3abff;
+    --indigo-soft: rgba(163, 171, 255, 0.14);
+    --leaf: #72cf98;
+    --leaf-soft: rgba(114, 207, 152, 0.15);
+    --caution: #f08d60;
+    --caution-soft: rgba(240, 141, 96, 0.15);
+    --personal-ink: #f3c86a;
+    --dot: rgba(242, 233, 216, 0.06);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root[data-theme="auto"] {
+        --paper: #15151f;
+        --paper-2: #1d1d2b;
+        --card: #21212f;
+        --ink: #f2e9d8;
+        --ink-soft: #b8aa93;
+        --line: rgba(242, 233, 216, 0.13);
+        --kumkum: #f07c58;
+        --kumkum-soft: rgba(240, 124, 88, 0.14);
+        --haldi: #f0b740;
+        --haldi-soft: rgba(240, 183, 64, 0.16);
+        --indigo: #a3abff;
+        --indigo-soft: rgba(163, 171, 255, 0.14);
+        --leaf: #72cf98;
+        --leaf-soft: rgba(114, 207, 152, 0.15);
+        --caution: #f08d60;
+        --caution-soft: rgba(240, 141, 96, 0.15);
+        --personal-ink: #f3c86a;
+        --dot: rgba(242, 233, 216, 0.06);
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.35);
+        color-scheme: dark;
+    }
+}
+
+/* Bigger text for elders */
+:root[data-size="large"] {
+    font-size: 112.5%;
+}
+
+:root[data-size="larger"] {
+    font-size: 125%;
 }
 
 [hidden] {
@@ -34,283 +105,2044 @@ body.witching {
     -webkit-tap-highlight-color: transparent;
 }
 
-body {
-    background: radial-gradient(circle at top, var(--bg-top) 0%, var(--bg) 85%);
-    background-attachment: fixed;
-    color: var(--text);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    min-height: 100vh;
-    min-height: -webkit-fill-available;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 16px 14px;
-    padding-top: max(16px, env(safe-area-inset-top));
-    padding-bottom: max(20px, env(safe-area-inset-bottom));
-    overflow-x: hidden;
-    transition: background 1s ease;
+html {
+    background: var(--paper);
 }
 
-body > .top-bar,
-body > header,
-body > main {
-    position: relative;
-    z-index: 1;
+body {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--ink);
+    background-color: var(--paper);
+    /* The pulli: the dot grid a kolam is drawn on */
+    background-image: radial-gradient(var(--dot) 1.2px, transparent 1.6px);
+    background-size: 22px 22px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+    color: inherit;
 }
 
 button {
-    font-family: inherit;
-}
-
-/* --- LIVING SKY --- */
-/* Width and height are set from JS to match the drawing size */
-#sky-canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 0;
-    pointer-events: none;
-}
-
-.mist {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    overflow: hidden;
-}
-
-.mist-layer {
-    position: absolute;
-    width: 200%;
-    height: 60%;
-    left: -50%;
-    background:
-        radial-gradient(ellipse 30% 40% at 20% 50%, var(--mist), transparent 70%),
-        radial-gradient(ellipse 25% 35% at 55% 40%, var(--mist), transparent 70%),
-        radial-gradient(ellipse 35% 45% at 85% 60%, var(--mist), transparent 70%);
-    filter: blur(20px);
-}
-
-.mist-layer.m1 {
-    bottom: -10%;
-    animation: mistDrift 70s ease-in-out infinite alternate;
-}
-
-.mist-layer.m2 {
-    bottom: 15%;
-    opacity: 0.6;
-    animation: mistDrift 95s ease-in-out infinite alternate-reverse;
-}
-
-@keyframes mistDrift {
-    from {
-        transform: translateX(-12%);
-    }
-
-    to {
-        transform: translateX(12%);
-    }
-}
-
-/* --- FULL SCREEN ACCESS BLOCKER --- */
-#blocker-screen {
-    position: fixed;
-    inset: 0;
-    /* A sealed stone door, lit only where the lamp is held */
-    background: radial-gradient(
-        circle var(--lamp-r, 420px) at var(--lamp-x, 50%) var(--lamp-y, 40%),
-        #2c1b0d 0%,
-        #140c06 50%,
-        #030201 100%
-    );
-    display: flex;
-    justify-content: center;
-    z-index: 99999;
-    padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    transition: opacity 0.4s ease, visibility 0.4s;
-}
-
-.gatekeeper-card {
-    /* margin: auto centres it, yet lets the screen scroll when it doesn't fit */
-    margin: auto 0;
-    background: rgba(26, 18, 12, 0.96);
-    border: 1px solid var(--accent);
-    border-radius: 18px;
-    padding: 32px 24px;
-    width: 100%;
-    max-width: 380px;
-    text-align: center;
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.9), 0 0 20px var(--accent-glow);
-}
-
-.gatekeeper-icon {
-    font-size: 2.5rem;
-    margin-bottom: 12px;
-    display: inline-block;
-    animation: pulseGlow 2s infinite ease-in-out;
-}
-
-@keyframes pulseGlow {
-
-    0%,
-    100% {
-        transform: scale(1);
-        filter: drop-shadow(0 0 5px var(--accent));
-    }
-
-    50% {
-        transform: scale(1.08);
-        filter: drop-shadow(0 0 14px var(--accent));
-    }
-}
-
-.gatekeeper-card h2 {
-    font-family: 'Cinzel', serif;
-    color: var(--accent);
-    font-size: clamp(1.3rem, 5vw, 1.6rem);
-    letter-spacing: 2px;
-    margin-bottom: 8px;
-}
-
-.gatekeeper-card p {
-    color: var(--text-muted);
-    font-size: 0.88rem;
-    margin-bottom: 20px;
-    line-height: 1.5;
-}
-
-.pin-input-field {
-    width: 100%;
-    background: #120c08;
-    border: 1px solid rgba(212, 175, 55, 0.4);
-    border-radius: 10px;
-    padding: 14px;
-    color: #fff;
-    font-size: 16px;
-    /* Prevents auto-zoom on iOS */
-    letter-spacing: 2px;
-    text-align: center;
-    outline: none;
-    margin-bottom: 16px;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.pin-input-field:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 10px var(--accent-glow);
-}
-
-.btn-unlock {
-    width: 100%;
-    min-height: 48px;
-    background: linear-gradient(135deg, #d4af37, #aa8214);
-    border: none;
-    border-radius: 10px;
-    color: #0c0806;
-    font-weight: 700;
-    padding: 12px;
     cursor: pointer;
-    font-family: 'Cinzel', serif;
-    letter-spacing: 1.5px;
-    font-size: 0.95rem;
-    transition: transform 0.1s;
 }
 
-.btn-unlock:active {
-    transform: scale(0.97);
+:focus-visible {
+    outline: 2px solid var(--haldi);
+    outline-offset: 2px;
 }
 
-.error-msg {
-    color: var(--danger);
+.deva {
+    font-family: var(--font-deva);
+    font-weight: 400;
+    letter-spacing: 0;
+}
+
+.muted {
+    color: var(--ink-soft);
+}
+
+.hint {
+    color: var(--ink-soft);
     font-size: 0.85rem;
-    margin-top: 14px;
+    line-height: 1.45;
+}
+
+h1,
+h2,
+h3 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    line-height: 1.2;
+    letter-spacing: 0.2px;
+}
+
+h2 {
+    font-size: 1.3rem;
+}
+
+h3 {
+    font-size: 1.08rem;
+}
+
+/* --- BUTTONS, CHIPS, FIELDS --- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 46px;
+    padding: 10px 20px;
+    border-radius: 999px;
+    border: none;
+    background: var(--kumkum);
+    color: #fff;
+    font-weight: 600;
+    font-size: 1rem;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
+    transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.btn:disabled {
+    filter: grayscale(0.6) opacity(0.6);
+    cursor: default;
+}
+
+.btn.ghost {
+    background: transparent;
+    color: var(--kumkum);
+    border: 1.5px solid currentColor;
+    box-shadow: none;
+}
+
+.btn.small {
+    min-height: 36px;
+    padding: 6px 14px;
+    font-size: 0.9rem;
+}
+
+.btn.wide {
+    width: 100%;
+}
+
+.link-btn {
+    background: none;
+    border: none;
+    color: var(--kumkum);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 6px 2px;
+}
+
+.link-btn.danger {
+    color: var(--caution);
+}
+
+.icon-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--card);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink);
+}
+
+.icon-btn svg,
+.tab-btn svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.chip-scroll {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 2px 2px 6px;
+    scrollbar-width: none;
+}
+
+.chip-scroll::-webkit-scrollbar {
     display: none;
 }
 
-/* --- TOP BAR --- */
-.top-bar {
-    width: 100%;
-    max-width: 800px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
-}
-
-.moon-label {
-    color: var(--text-muted);
-    font-size: 0.78rem;
+.chip {
+    flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    min-height: 36px;
+    padding: 4px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    font-size: 0.92rem;
     white-space: nowrap;
 }
 
-.top-actions {
-    display: flex;
-    gap: 6px;
+button.chip[aria-pressed="true"] {
+    background: var(--kumkum);
+    border-color: var(--kumkum);
+    color: #fff;
 }
 
-.pill-btn {
-    background: rgba(26, 18, 12, 0.8);
-    border: 1px solid rgba(212, 175, 55, 0.35);
-    color: var(--accent);
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.78rem;
-    cursor: pointer;
+.chip.now {
+    border-color: var(--haldi);
+    background: var(--haldi-soft);
+}
+
+.chip.past {
+    color: var(--ink-soft);
+}
+
+.seg {
     display: inline-flex;
-    align-items: center;
+    padding: 3px;
+    border-radius: 999px;
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    gap: 2px;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.seg button {
+    border: none;
+    background: none;
+    border-radius: 999px;
+    padding: 6px 12px;
+    min-height: 34px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    color: var(--ink-soft);
+}
+
+.seg button[aria-pressed="true"] {
+    background: var(--card);
+    color: var(--ink);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
     gap: 6px;
-    min-height: 32px;
+    font-size: 0.92rem;
+    font-weight: 500;
 }
 
-.pill-btn[aria-pressed="false"] {
-    color: var(--text-muted);
+.field em {
+    font-style: normal;
+    font-weight: 400;
+    color: var(--ink-soft);
 }
 
-/* Icons only on narrow phones */
-@media (max-width: 480px) {
-    .pill-label {
-        display: none;
-    }
-
-    .pill-btn {
-        padding: 6px 10px;
-    }
-}
-
-header {
-    text-align: center;
-    margin-bottom: 18px;
-}
-
-header h1 {
-    font-family: 'Cinzel', serif;
-    font-size: clamp(1.6rem, 6vw, 2.3rem);
-    color: var(--accent);
-    letter-spacing: 2px;
-    text-shadow: 0 0 15px var(--accent-glow);
-}
-
-header p {
-    color: var(--text-muted);
-    font-size: clamp(0.82rem, 3.2vw, 0.95rem);
-    margin-top: 6px;
-    padding: 0 8px;
-}
-
-#main-container {
+.field input,
+.field select,
+.field textarea,
+.input {
     width: 100%;
-    max-width: 800px;
+    min-height: 46px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    font-size: 1rem;
+}
+
+.field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.form {
     display: flex;
     flex-direction: column;
     gap: 14px;
 }
+
+.place-results {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.place-option {
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--card);
+}
+
+.place-chosen {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: var(--leaf-soft);
+}
+
+.place-chosen button {
+    border: none;
+    background: none;
+    font-size: 1.1rem;
+    padding: 4px 8px;
+}
+
+/* --- CARDS (surfaces) --- */
+.card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 16px;
+}
+
+.card + .card,
+.stack > * + * {
+    margin-top: 14px;
+}
+
+.card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.card-head .deva {
+    color: var(--ink-soft);
+}
+
+.eyebrow {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--kumkum);
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid currentColor;
+}
+
+.badge.good {
+    color: var(--leaf);
+    background: var(--leaf-soft);
+}
+
+.badge.caution,
+.badge.testing,
+.badge.present {
+    color: var(--caution);
+    background: var(--caution-soft);
+}
+
+.badge.mixed,
+.badge.mild {
+    color: var(--personal-ink);
+    background: var(--haldi-soft);
+}
+
+.badge.cancelled {
+    color: var(--leaf);
+}
+
+.badge.absent {
+    color: var(--ink-soft);
+}
+
+.empty {
+    text-align: center;
+    padding: 26px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.empty .kolam {
+    width: 120px;
+    height: 120px;
+}
+
+/* --- KOLAM: drawn in one stroke, as a kolam is --- */
+.kolam {
+    overflow: visible;
+}
+
+.kolam .kolam-line {
+    fill: none;
+    stroke: var(--kumkum);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: drawKolam 3.2s ease-in-out forwards;
+}
+
+.kolam .kolam-dot {
+    fill: var(--haldi);
+    opacity: 0;
+    animation: kolamDot 0.6s ease forwards;
+    animation-delay: calc(var(--i) * 40ms);
+}
+
+@keyframes drawKolam {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes kolamDot {
+    to {
+        opacity: 0.9;
+    }
+}
+
+/* --- THE GATE --- */
+.gate {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 24px;
+    text-align: center;
+    background-color: var(--paper);
+    background-image: radial-gradient(var(--dot) 1.2px, transparent 1.6px);
+    background-size: 22px 22px;
+    transition: opacity 0.4s ease;
+}
+
+.gate .kolam {
+    width: 150px;
+    height: 150px;
+}
+
+.gate h1 {
+    font-size: 2.4rem;
+    color: var(--kumkum);
+}
+
+.gate form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: min(320px, 100%);
+}
+
+.gate .error {
+    color: var(--caution);
+    min-height: 1.5em;
+}
+
+/* --- APP SHELL --- */
+.app {
+    max-width: 760px;
+    margin: 0 auto;
+    padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 24px);
+}
+
+.app-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+    padding: max(10px, env(safe-area-inset-top)) 14px 10px;
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+}
+
+.header-title {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    color: var(--kumkum);
+    text-align: center;
+}
+
+.app-header .icon-btn {
+    justify-self: end;
+}
+
+.person-chip {
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 100%;
+    min-height: 44px;
+    padding: 4px 12px 4px 4px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--card);
+}
+
+.person-chip .who {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+    max-width: 30vw;
+}
+
+.avatar {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    background: hsl(var(--hue, 15) 55% 45%);
+}
+
+.avatar.big {
+    width: 54px;
+    height: 54px;
+    font-size: 1.4rem;
+}
+
+.tab {
+    padding: 16px 14px;
+    animation: tabIn 0.35s ease;
+}
+
+@keyframes tabIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+}
+
+.tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 6px 6px max(6px, env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--card) 94%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid var(--line);
+}
+
+.tab-btn {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-height: 52px;
+    padding: 6px 2px 2px;
+    border: none;
+    background: none;
+    color: var(--ink-soft);
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.tab-btn[aria-current="page"] {
+    color: var(--kumkum);
+}
+
+/* A bindi marks the open tab */
+.tab-btn[aria-current="page"]::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--kumkum);
+    box-shadow: 0 0 0 3px var(--kumkum-soft);
+    animation: bindi 0.4s ease;
+}
+
+@keyframes bindi {
+    from {
+        transform: scale(0);
+    }
+}
+
+/* --- SHEETS --- */
+.sheet-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(20, 12, 6, 0.45);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.sheet {
+    position: relative;
+    width: min(640px, 100%);
+    max-height: 92vh;
+    max-height: 92dvh;
+    overflow-y: auto;
+    background: var(--paper);
+    border-radius: 22px 22px 0 0;
+    padding: 10px 18px calc(20px + env(safe-area-inset-bottom));
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.25);
+    animation: sheetUp 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.sheet-handle {
+    width: 44px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--line);
+    margin: 0 auto 10px;
+}
+
+.sheet-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    border: none;
+    background: none;
+    font-size: 1.3rem;
+    width: 40px;
+    height: 40px;
+    color: var(--ink-soft);
+}
+
+.sheet h2 {
+    margin: 4px 40px 12px 0;
+    color: var(--kumkum);
+}
+
+@media (min-width: 700px) {
+    .sheet-overlay {
+        align-items: center;
+    }
+
+    .sheet {
+        border-radius: 22px;
+    }
+}
+
+@keyframes sheetUp {
+    from {
+        transform: translateY(40px);
+        opacity: 0;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+}
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 14px);
+    transform: translateX(-50%);
+    z-index: 3000;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 0.92rem;
+    box-shadow: var(--shadow);
+    animation: fadeIn 0.2s ease;
+    max-width: calc(100vw - 32px);
+}
+
+.list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+}
+
+.list > li + li {
+    border-top: 1px solid var(--line);
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 2px;
+}
+
+.row .grow {
+    flex: 1;
+    min-width: 0;
+}
+
+.row-button {
+    width: 100%;
+    border: none;
+    background: none;
+    text-align: left;
+}
+
+/* --- TODAY --- */
+.hero {
+    text-align: center;
+    padding: 4px 0 6px;
+}
+
+.hero .date-line {
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+}
+
+.hero .tithi-name {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    color: var(--kumkum);
+    line-height: 1.15;
+    margin-top: 2px;
+}
+
+.hero .tithi-deva {
+    font-size: 1.15rem;
+    color: var(--ink-soft);
+}
+
+.hero .place-line {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    margin-top: 4px;
+    font-size: 0.9rem;
+}
+
+.moon-svg {
+    width: 34px;
+    height: 34px;
+    vertical-align: middle;
+}
+
+.moon-svg .moon-dark {
+    fill: var(--paper-2);
+    stroke: var(--line);
+}
+
+.moon-svg .moon-lit {
+    fill: var(--haldi);
+}
+
+.festival-banner {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    background: linear-gradient(120deg, var(--haldi-soft), var(--kumkum-soft));
+    border: 1px solid var(--haldi);
+    margin-bottom: 14px;
+}
+
+.festival-banner .diya-icon {
+    font-size: 1.6rem;
+}
+
+/* The day wheel: sunrise on the left, sunset on the right, day above, night below */
+.wheel-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 6px 0 2px;
+}
+
+.day-wheel {
+    width: min(330px, 86vw);
+    height: auto;
+    overflow: visible;
+}
+
+.day-wheel .ring-bg {
+    fill: none;
+    stroke: var(--paper-2);
+}
+
+.day-wheel .chog {
+    stroke: var(--card);
+    stroke-width: 1.5;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.day-wheel .chog.good {
+    fill: var(--leaf);
+    opacity: 0.7;
+}
+
+.day-wheel .chog.neutral {
+    fill: var(--haldi);
+    opacity: 0.55;
+}
+
+.day-wheel .chog.bad {
+    fill: var(--caution);
+    opacity: 0.38;
+}
+
+.day-wheel .chog.night {
+    opacity: 0.32;
+}
+
+.day-wheel .chog.current {
+    opacity: 1;
+}
+
+.day-wheel .kaal {
+    fill: none;
+    stroke-width: 9;
+    stroke-linecap: round;
+}
+
+.day-wheel .kaal.rahu {
+    stroke: var(--kumkum);
+}
+
+.day-wheel .kaal.yama,
+.day-wheel .kaal.gulika {
+    stroke: var(--ink-soft);
+    opacity: 0.45;
+}
+
+.day-wheel .kaal.abhijit {
+    stroke: var(--haldi);
+}
+
+.day-wheel .horizon {
+    stroke: var(--line);
+    stroke-width: 1;
+    stroke-dasharray: 3 4;
+}
+
+.day-wheel .wheel-label {
+    font-size: 9px;
+    fill: var(--ink-soft);
+    font-family: var(--font-body);
+}
+
+.day-wheel .center-name {
+    font-family: var(--font-display);
+    font-size: 22px;
+    fill: var(--ink);
+}
+
+.day-wheel .center-sub {
+    font-size: 10.5px;
+    fill: var(--ink-soft);
+}
+
+.day-wheel .center-alert {
+    font-size: 10.5px;
+    font-weight: 600;
+    fill: var(--kumkum);
+}
+
+.day-wheel .now-marker {
+    filter: drop-shadow(0 0 6px var(--haldi));
+}
+
+.day-wheel .now-sun {
+    fill: var(--haldi);
+    stroke: var(--card);
+    stroke-width: 2;
+}
+
+.day-wheel .now-moon {
+    fill: var(--indigo);
+    stroke: var(--card);
+    stroke-width: 2;
+}
+
+.wheel-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 14px;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+}
+
+.wheel-legend i {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    margin-right: 4px;
+    vertical-align: -1px;
+}
+
+.periods {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.period {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+}
+
+.period.rahu {
+    border-color: var(--kumkum);
+    background: var(--kumkum-soft);
+}
+
+.period.abhijit {
+    border-color: var(--haldi);
+    background: var(--haldi-soft);
+}
+
+.period .label {
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+}
+
+.period .time {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.mood-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.guidance {
+    font-size: 1.04rem;
+    line-height: 1.6;
+}
+
+.facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.fact {
+    padding: 6px 12px;
+    border-radius: 10px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    font-size: 0.88rem;
+}
+
+.fact strong {
+    color: var(--kumkum);
+    font-weight: 600;
+}
+
+.limbs .limb {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    gap: 2px 12px;
+    padding: 9px 0;
+}
+
+.limbs .limb + .limb {
+    border-top: 1px solid var(--line);
+}
+
+.limb-label {
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+}
+
+.limb-name {
+    font-weight: 600;
+}
+
+.limb-name .deva {
+    color: var(--ink-soft);
+    font-weight: 400;
+    margin-left: 6px;
+}
+
+.limb-detail {
+    grid-column: 2;
+    font-size: 0.86rem;
+    color: var(--ink-soft);
+}
+
+.coming-day {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 10px;
+    padding: 8px 0;
+}
+
+.coming-day + .coming-day {
+    border-top: 1px solid var(--line);
+}
+
+.date-chip {
+    text-align: center;
+    border-radius: 10px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    padding: 4px 0;
+    line-height: 1.15;
+}
+
+.date-chip b {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    color: var(--kumkum);
+    font-weight: 400;
+}
+
+.date-chip small {
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+}
+
+.item-name.festival::before,
+.item-name.fast::before,
+.item-name.sankranti::before,
+.item-name.personal::before,
+.item-name.caution::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 7px;
+    vertical-align: 1px;
+}
+
+.item-name.festival::before {
+    background: var(--haldi);
+}
+
+.item-name.fast::before {
+    background: var(--kumkum);
+}
+
+.item-name.sankranti::before {
+    background: var(--leaf);
+}
+
+.item-name.personal::before {
+    background: var(--indigo);
+}
+
+.item-name.caution::before {
+    background: transparent;
+    border: 2px solid var(--caution);
+    width: 6px;
+    height: 6px;
+}
+
+.item-note {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+}
+
+/* Card of the day: face-down until tapped */
+.daily {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+}
+
+.daily-card {
+    flex-shrink: 0;
+    width: 86px;
+    aspect-ratio: var(--card-ratio);
+    perspective: 900px;
+    border: none;
+    background: none;
+    padding: 0;
+}
+
+.daily-card .card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.8s cubic-bezier(0.3, 1.3, 0.5, 1);
+    transform-style: preserve-3d;
+}
+
+.daily-card.is-flipped .card-inner {
+    transform: rotateY(180deg);
+}
+
+.daily-card .card-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.daily-card .card-front {
+    transform: rotateY(180deg);
+    border: 2px solid var(--haldi);
+    background: #efe4c8;
+}
+
+.daily-card .card-front img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.daily-card.reversed .card-front img {
+    transform: rotate(180deg);
+}
+
+/* --- ASK --- */
+.asking-about {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.95rem;
+    margin-bottom: 10px;
+}
+
+.ask-box {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ask-box textarea {
+    width: 100%;
+    min-height: 96px;
+    resize: vertical;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1.5px solid var(--line);
+    background: var(--card);
+    font-size: 1.05rem;
+    line-height: 1.5;
+}
+
+.ask-box textarea:focus {
+    border-color: var(--haldi);
+    outline: none;
+}
+
+.ask-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.suggestions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.suggestion {
+    text-align: left;
+    border: 1px dashed var(--line);
+    background: transparent;
+    border-radius: 12px;
+    padding: 8px 12px;
+    color: var(--ink-soft);
+}
+
+/* A diya burns while the table is empty */
+.diya {
+    position: relative;
+    width: 70px;
+    height: 70px;
+    margin: 4px auto 0;
+}
+
+.diya .bowl {
+    position: absolute;
+    bottom: 6px;
+    left: 8px;
+    width: 54px;
+    height: 20px;
+    border-radius: 0 0 30px 30px;
+    background: linear-gradient(var(--haldi), #9b5a12);
+}
+
+.diya .flame {
+    position: absolute;
+    bottom: 24px;
+    left: 28px;
+    width: 14px;
+    height: 26px;
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    background: radial-gradient(circle at 50% 70%, #fff6c8 0 20%, #ffc44d 45%, #f07c2a 80%);
+    transform-origin: 50% 100%;
+    animation: flicker 2.6s ease-in-out infinite;
+    filter: drop-shadow(0 0 10px rgba(255, 170, 60, 0.8));
+}
+
+@keyframes flicker {
+    0%,
+    100% {
+        transform: rotate(-2deg) scaleY(1);
+    }
+
+    30% {
+        transform: rotate(3deg) scaleY(1.08);
+    }
+
+    55% {
+        transform: rotate(-1deg) scaleY(0.94);
+    }
+
+    80% {
+        transform: rotate(2deg) scaleY(1.04);
+    }
+}
+
+.reading {
+    margin-top: 16px;
+}
+
+.table {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0 14px;
+}
+
+.spread-legend {
+    list-style: none;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.9rem;
+}
+
+.dasha-ribbon {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: var(--indigo-soft);
+    border: 1px solid var(--line);
+    margin-bottom: 12px;
+    font-size: 0.95rem;
+}
+
+.dasha-ribbon b {
+    color: var(--indigo);
+}
+
+.tldr-box {
+    border-left: 4px solid var(--kumkum);
+    background: var(--haldi-soft);
+    border-radius: 0 14px 14px 0;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+}
+
+.tldr-box .eyebrow {
+    margin-bottom: 4px;
+}
+
+.tldr-text {
+    font-size: 1.1rem;
+    line-height: 1.55;
+    font-weight: 500;
+}
+
+.narrative {
+    white-space: pre-wrap;
+    font-size: 1.04rem;
+    line-height: 1.75;
+}
+
+.status-msg {
+    color: var(--ink-soft);
+    font-style: italic;
+}
+
+.error-text {
+    color: var(--caution);
+}
+
+.reading-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+
+.follow-up {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.follow-up input {
+    flex: 1;
+    min-width: 0;
+}
+
+.journal-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.journal-entry {
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+}
+
+.journal-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.journal-sigil {
+    width: 34px;
+    height: 34px;
+}
+
+.journal-sigil .sigil-line {
+    stroke: var(--kumkum);
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+}
+
+.journal-date {
+    flex: 1;
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+}
+
+.journal-delete {
+    border: none;
+    background: none;
+    color: var(--ink-soft);
+    padding: 6px;
+}
+
+.journal-question {
+    margin-top: 6px;
+    font-weight: 500;
+}
+
+.journal-tldr {
+    margin-top: 6px;
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+}
+
+.journal-thumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.journal-thumb {
+    width: 34px;
+    aspect-ratio: var(--card-ratio);
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    padding: 0;
+    background: #efe4c8;
+}
+
+.journal-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.journal-thumb img.reversed {
+    transform: rotate(180deg);
+}
+
+.journal-thumb.personal {
+    border-color: var(--haldi);
+    box-shadow: 0 0 0 2px var(--haldi-soft);
+}
+
+.journal-aya {
+    font-size: 0.8rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 2px 10px;
+}
+
+.journal-aya.testing {
+    color: var(--caution);
+}
+
+/* --- TIMELINE --- */
+.tl-legend {
+    display: grid;
+    grid-template-columns: 46px repeat(4, 1fr);
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    text-align: center;
+    position: sticky;
+    top: 64px;
+    z-index: 5;
+    background: var(--paper);
+    padding: 6px 0;
+}
+
+.tl {
+    position: relative;
+    display: grid;
+    grid-template-columns: 46px repeat(4, 1fr);
+    gap: 4px;
+}
+
+.tl-years,
+.tl-lane {
+    position: relative;
+}
+
+.tl-year {
+    position: absolute;
+    left: 0;
+    right: 0;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    border-top: 1px solid var(--line);
+    padding-top: 1px;
+}
+
+.tl-year.decade {
+    color: var(--ink);
+    font-weight: 600;
+}
+
+.tl-band {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-radius: 6px;
+    border: none;
+    padding: 2px 4px;
+    overflow: hidden;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-align: left;
+    color: #fff;
+    line-height: 1.15;
+    display: flex;
+    align-items: flex-start;
+}
+
+.tl-band.ad {
+    color: var(--ink);
+    background: var(--paper-2);
+    border: 1px solid var(--card);
+    font-weight: 500;
+}
+
+.tl-band.ad.past {
+    opacity: 0.55;
+}
+
+.tl-band.ad.current {
+    background: var(--haldi-soft);
+    outline: 2px solid var(--haldi);
+    z-index: 2;
+}
+
+.tl-band.sade {
+    background: var(--kumkum);
+}
+
+.tl-band.sade.dhaiya {
+    background: var(--caution);
+    opacity: 0.6;
+}
+
+.tl-band.guru {
+    background: var(--haldi);
+    color: #3a2400;
+}
+
+.tl-band.guru.quiet {
+    background: transparent;
+    border: 1px dashed var(--line);
+    color: var(--ink-soft);
+    font-weight: 400;
+}
+
+.tl-now {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 0;
+    border-top: 2px solid var(--kumkum);
+    z-index: 6;
+    pointer-events: none;
+}
+
+.tl-now span {
+    position: absolute;
+    right: 0;
+    top: -11px;
+    background: var(--kumkum);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 1px 8px;
+    border-radius: 999px;
+}
+
+.tl-event {
+    position: absolute;
+    left: 50px;
+    right: 0;
+    z-index: 7;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    background: none;
+    font-size: 0.78rem;
+    text-align: left;
+    padding: 0;
+    transform: translateY(-50%);
+}
+
+.tl-event .pin {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--indigo);
+    box-shadow: 0 0 0 3px var(--card);
+}
+
+.tl-event .label {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 1px 8px;
+    box-shadow: var(--shadow);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 70%;
+}
+
+.fab {
+    position: fixed;
+    right: max(18px, calc(50% - 360px));
+    bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 16px);
+    z-index: 55;
+    border-radius: 999px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.period-detail .meaning {
+    font-size: 1.02rem;
+    line-height: 1.6;
+}
+
+/* --- FAMILY --- */
+.people {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.person-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    padding: 12px;
+    border-radius: var(--radius);
+    background: var(--card);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+}
+
+.person-card.selected {
+    border-color: var(--kumkum);
+    box-shadow: 0 0 0 2px var(--kumkum-soft), var(--shadow);
+}
+
+.person-card .name {
+    font-weight: 600;
+    font-size: 1.05rem;
+}
+
+.person-card .meta {
+    font-size: 0.86rem;
+    color: var(--ink-soft);
+}
+
+.person-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.person-head h2 {
+    font-size: 1.5rem;
+}
+
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: none;
+    background: none;
+    color: var(--kumkum);
+    font-weight: 600;
+    padding: 6px 0;
+    margin-bottom: 8px;
+}
+
+.action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.tiles {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.tile {
+    text-align: center;
+    padding: 10px 6px;
+    border-radius: 12px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+}
+
+.tile .tile-label {
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+}
+
+.tile .tile-value {
+    font-weight: 600;
+}
+
+.tile .deva {
+    display: block;
+    color: var(--kumkum);
+    font-size: 1.15rem;
+}
+
+.score-wrap {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.score-ring {
+    width: 116px;
+    height: 116px;
+    flex-shrink: 0;
+}
+
+.score-ring .track {
+    fill: none;
+    stroke: var(--paper-2);
+    stroke-width: 10;
+}
+
+.score-ring .fill {
+    fill: none;
+    stroke: var(--kumkum);
+    stroke-width: 10;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+}
+
+.score-ring .score {
+    font-family: var(--font-display);
+    font-size: 30px;
+    fill: var(--ink);
+}
+
+.score-ring .of {
+    font-size: 11px;
+    fill: var(--ink-soft);
+}
+
+.koota {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 12px;
+    padding: 9px 0;
+}
+
+.koota + .koota {
+    border-top: 1px solid var(--line);
+}
+
+.koota .bar {
+    grid-column: 1 / -1;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--paper-2);
+    overflow: hidden;
+}
+
+.koota .bar i {
+    display: block;
+    height: 100%;
+    background: var(--leaf);
+    border-radius: 3px;
+}
+
+.koota .bar i.low {
+    background: var(--caution);
+}
+
+.koota .who {
+    grid-column: 1 / -1;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+}
+
+/* --- CALENDAR --- */
+.month-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.month-head h2 {
+    font-size: 1.35rem;
+}
+
+.month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.month-grid .dow {
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    padding-bottom: 2px;
+}
+
+.day-cell {
+    position: relative;
+    aspect-ratio: 1 / 1.08;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 4px 2px;
+    min-width: 0;
+}
+
+.day-cell .num {
+    font-weight: 600;
+    font-size: 0.98rem;
+    line-height: 1.1;
+}
+
+.day-cell .tithi {
+    font-size: 0.6rem;
+    color: var(--ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.day-cell .dots {
+    display: flex;
+    gap: 2px;
+    margin-top: auto;
+}
+
+.day-cell .dots i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.day-cell .dots .festival {
+    background: var(--haldi);
+}
+
+.day-cell .dots .fast {
+    background: var(--kumkum);
+}
+
+.day-cell .dots .sankranti {
+    background: var(--leaf);
+}
+
+.day-cell .dots .personal {
+    background: var(--indigo);
+}
+
+.day-cell .dots .caution {
+    border: 1.5px solid var(--caution);
+}
+
+.day-cell.today {
+    border: 2px solid var(--kumkum);
+}
+
+.day-cell.chosen {
+    background: var(--haldi-soft);
+    border-color: var(--haldi);
+}
+
+.day-cell.purnima .num::after,
+.day-cell.amavasya .num::after {
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-left: 3px;
+    vertical-align: 2px;
+}
+
+.day-cell.purnima .num::after {
+    background: var(--haldi);
+}
+
+.day-cell.amavasya .num::after {
+    background: var(--ink);
+}
+
+.agenda-day {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 10px;
+    padding: 10px 0;
+}
+
+.agenda-day + .agenda-day {
+    border-top: 1px solid var(--line);
+}
+
+.muhurat-day {
+    padding: 12px 0;
+}
+
+.muhurat-day + .muhurat-day {
+    border-top: 1px solid var(--line);
+}
+
+.stars {
+    color: var(--haldi);
+    letter-spacing: 1px;
+}
+
+.windows {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.reasons {
+    font-size: 0.88rem;
+    margin-top: 4px;
+}
+
+.reasons .good {
+    color: var(--leaf);
+}
+
+.reasons .bad {
+    color: var(--caution);
+}
+
+/* --- SETTINGS --- */
+.settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 0;
+}
+
+.settings-group + .settings-group {
+    border-top: 1px solid var(--line);
+}
+
+.switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.switch {
+    position: relative;
+    width: 52px;
+    height: 30px;
+    border-radius: 999px;
+    border: none;
+    background: var(--paper-2);
+    box-shadow: inset 0 0 0 1px var(--line);
+    flex-shrink: 0;
+}
+
+.switch::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--card);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease;
+}
+
+.switch[aria-checked="true"] {
+    background: var(--leaf);
+}
+
+.switch[aria-checked="true"]::after {
+    transform: translateX(22px);
+}
+
+@media (max-width: 380px) {
+    .periods {
+        grid-template-columns: 1fr;
+    }
+
+    .tiles {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .field-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tab,
+    .sheet,
+    .kolam .kolam-line,
+    .kolam .kolam-dot,
+    .diya .flame,
+    .tab-btn[aria-current="page"]::before {
+        animation: none;
+    }
+
+    .kolam .kolam-line {
+        stroke-dashoffset: 0;
+    }
+
+    .kolam .kolam-dot {
+        opacity: 0.9;
+    }
+
+    .daily-card .card-inner,
+    .score-ring .fill {
+        transition: none;
+    }
+}
+
+/* --- PRINT: a person's chart for the jyotishi --- */
+@media print {
+    body {
+        background: #fff;
+    }
+
+    body.printing > *:not(.print-area) {
+        display: none !important;
+    }
+
+    .print-area {
+        display: block !important;
+        color: #000;
+    }
+
+    .print-area .no-print {
+        display: none !important;
+    }
+}
+
+.print-area {
+    display: none;
+}
+
+
+/* ===== The reading table, ritual, enlarged card, tour, sigil and cowries ===== */
 
 /* --- CARD BACK ARTWORK (shared by shuffler, ritual piles and dealt cards) --- */
 .card-back-art {
@@ -319,7 +2151,7 @@ header p {
         radial-gradient(circle at 50% 50%, transparent 0 17%, rgba(212, 175, 55, 0.4) 18% 19%, transparent 20%),
         repeating-conic-gradient(from 0deg at 50% 50%, rgba(212, 175, 55, 0.14) 0deg 5deg, transparent 5deg 15deg),
         radial-gradient(circle at 50% 50%, #5a1d12 0%, #1a0d08 75%);
-    border: 2px solid var(--accent);
+    border: 2px solid #d4af37;
     border-radius: 10px;
     box-shadow:
         inset 0 0 0 4px #1a0d08,
@@ -438,52 +2270,6 @@ header p {
     }
 }
 
-/* --- READING TABLE with candle glow --- */
-.table {
-    position: relative;
-}
-
-.table::before {
-    content: "";
-    position: absolute;
-    inset: -30px -10px;
-    background: radial-gradient(ellipse 55% 60% at 50% 50%, var(--candle), transparent 70%);
-    pointer-events: none;
-    z-index: -1;
-    animation: candleFlicker 3.7s infinite;
-}
-
-@keyframes candleFlicker {
-
-    0%,
-    100% {
-        opacity: 0.85;
-        transform: scale(1);
-    }
-
-    18% {
-        opacity: 0.65;
-    }
-
-    22% {
-        opacity: 0.95;
-        transform: scale(1.02);
-    }
-
-    47% {
-        opacity: 0.7;
-    }
-
-    52% {
-        opacity: 1;
-        transform: scale(0.99);
-    }
-
-    78% {
-        opacity: 0.75;
-    }
-}
-
 /* --- CARDS ON THE TABLE --- */
 .cards-tray {
     --card-w: min(150px, 27vw);
@@ -558,7 +2344,7 @@ header p {
 }
 
 .card-fallback {
-    font-family: 'Cinzel', serif;
+    font-family: var(--font-display);
     color: #3a2a1a;
     font-size: calc(var(--card-w) * 0.11);
     text-align: center;
@@ -586,7 +2372,7 @@ header p {
 }
 
 .card-title {
-    font-family: 'Cinzel', serif;
+    font-family: var(--font-display);
     font-size: clamp(0.78rem, 3vw, 1rem);
     line-height: 1.25;
     margin-bottom: 2px;
@@ -652,7 +2438,7 @@ header p {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: var(--bg);
+    background: var(--card);
     border: 1px solid var(--accent);
     color: var(--accent);
     font-size: 0.65rem;
@@ -711,137 +2497,6 @@ header p {
     color: var(--text-muted);
 }
 
-/* --- TL;DR SUMMARY BLOCK --- */
-.tldr-box {
-    display: none;
-    background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(26, 18, 12, 0.95));
-    border: 1px solid var(--accent);
-    border-left: 4px solid var(--accent);
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 4px 18px var(--accent-glow);
-    animation: fadeUp 0.8s ease forwards;
-}
-
-@keyframes fadeUp {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: none;
-    }
-}
-
-.tldr-badge {
-    font-family: 'Cinzel', serif;
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 1.2px;
-    color: var(--accent);
-    text-transform: uppercase;
-    margin-bottom: 6px;
-}
-
-.tldr-text {
-    color: #ffffff;
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 1.12rem;
-    line-height: 1.5;
-}
-
-/* --- CHAT DISPLAY & INPUT --- */
-.chat-box {
-    background: rgba(26, 18, 12, 0.75);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 14px;
-    padding: 18px 16px;
-    min-height: 160px;
-    max-height: 48vh;
-    overflow-y: auto;
-    line-height: 1.6;
-    font-size: 0.95rem;
-    -webkit-overflow-scrolling: touch;
-}
-
-.narrative {
-    white-space: pre-line;
-    word-break: break-word;
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 1.12rem;
-    line-height: 1.6;
-    animation: fadeUp 1s ease;
-}
-
-.status-msg {
-    color: var(--accent);
-}
-
-.error-text {
-    color: var(--danger);
-}
-
-.input-bar {
-    display: flex;
-    gap: 8px;
-    align-items: stretch;
-    width: 100%;
-}
-
-input[type="text"] {
-    background: var(--card-bg);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 10px;
-    padding: 12px 14px;
-    color: #fff;
-    font-size: 16px;
-    /* Prevents auto-zoom on mobile browsers */
-    outline: none;
-    flex: 1;
-    min-width: 0;
-    transition: border-color 0.2s;
-}
-
-input[type="text"]:focus {
-    border-color: var(--accent);
-}
-
-button.consult-btn {
-    background: linear-gradient(135deg, #d4af37, #aa8214);
-    border: none;
-    border-radius: 10px;
-    color: #0c0806;
-    font-weight: 700;
-    padding: 0 18px;
-    min-height: 46px;
-    cursor: pointer;
-    font-family: 'Cinzel', serif;
-    letter-spacing: 1px;
-    font-size: 0.9rem;
-    white-space: nowrap;
-    flex-shrink: 0;
-    transition: transform 0.1s, opacity 0.2s;
-}
-
-button.consult-btn:active {
-    transform: scale(0.96);
-}
-
-.new-reading-btn {
-    align-self: center;
-    font-family: 'Cinzel', serif;
-    letter-spacing: 1px;
-    padding: 8px 18px;
-}
-
-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
 /* --- RITUAL --- */
 .ritual {
     position: fixed;
@@ -873,7 +2528,7 @@ button:disabled {
 }
 
 .ritual-question {
-    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-family: var(--font-body);
     font-style: italic;
     font-size: 1.2rem;
     color: var(--text-muted);
@@ -889,7 +2544,7 @@ button:disabled {
 }
 
 .ritual-instruction {
-    font-family: 'Cinzel', serif;
+    font-family: var(--font-display);
     color: var(--accent);
     letter-spacing: 1.5px;
     font-size: 1.05rem;
@@ -1048,14 +2703,14 @@ button:disabled {
 }
 
 .lightbox-card h3 {
-    font-family: 'Cinzel', serif;
+    font-family: var(--font-display);
     color: var(--accent);
     font-size: 1.4rem;
     margin: 4px 0;
 }
 
 .lightbox-card p {
-    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-family: var(--font-body);
     font-size: 1.15rem;
     line-height: 1.5;
     margin-top: 10px;
@@ -1139,35 +2794,6 @@ button:disabled {
     }
 }
 
-/* --- PERSONAL TOUCHES --- */
-.retrograde-badge {
-    color: var(--accent);
-    border: 1px solid rgba(212, 175, 55, 0.4);
-    border-radius: 999px;
-    padding: 1px 7px;
-    font-size: 0.72rem;
-    cursor: help;
-}
-
-.daily-card-btn {
-    margin-top: 12px;
-    background: none;
-    border: 1px solid rgba(212, 175, 55, 0.35);
-    color: var(--accent);
-    border-radius: 999px;
-    padding: 6px 14px;
-    font-family: 'Cinzel', serif;
-    font-size: 0.78rem;
-    letter-spacing: 1px;
-    cursor: pointer;
-    transition: box-shadow 0.3s;
-}
-
-.daily-card-btn:hover,
-.daily-card-btn:focus-visible {
-    box-shadow: 0 0 14px var(--accent-glow);
-}
-
 /* A card that is the querent's birth card or sign card */
 .tarot-card.personal.is-flipped .card-front {
     box-shadow:
@@ -1194,7 +2820,7 @@ button:disabled {
 }
 
 .card-personal {
-    color: #ffe7a3;
+    color: var(--personal-ink);
     font-size: 0.7rem;
     font-weight: 600;
     margin-top: 4px;
@@ -1202,690 +2828,8 @@ button:disabled {
 }
 
 .legend-personal {
-    color: #ffe7a3;
+    color: var(--personal-ink);
     font-size: 0.75rem;
-}
-
-/* --- PANELS: profile and journal --- */
-.panel-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    background: rgba(5, 3, 2, 0.86);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding: max(20px, env(safe-area-inset-top)) 14px 20px;
-    overflow-y: auto;
-    animation: fadeUp 0.3s ease;
-}
-
-.panel {
-    position: relative;
-    width: 100%;
-    max-width: 520px;
-    margin: auto 0;
-    background: rgba(26, 18, 12, 0.97);
-    border: 1px solid var(--accent);
-    border-radius: 18px;
-    padding: 26px 22px 22px;
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), 0 0 20px var(--accent-glow);
-}
-
-.panel h2 {
-    font-family: 'Cinzel', serif;
-    color: var(--accent);
-    font-size: 1.3rem;
-    letter-spacing: 1.5px;
-    margin-bottom: 6px;
-    padding-right: 28px;
-}
-
-.panel-sub {
-    color: var(--text-muted);
-    font-size: 0.82rem;
-    line-height: 1.5;
-    margin-bottom: 18px;
-}
-
-.panel-close {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    font-size: 1.2rem;
-    cursor: pointer;
-    padding: 6px;
-}
-
-.profile-form {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-
-.field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    font-size: 0.82rem;
-    color: var(--text);
-    flex: 1;
-    min-width: 0;
-}
-
-.field em,
-.hint {
-    color: var(--text-muted);
-    font-style: normal;
-    font-size: 0.75rem;
-}
-
-.field-row {
-    display: flex;
-    gap: 12px;
-}
-
-@media (max-width: 420px) {
-    .field-row {
-        flex-direction: column;
-    }
-}
-
-.field input,
-.place-chosen {
-    background: #120c08;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 10px;
-    padding: 10px 12px;
-    color: #fff;
-    font-size: 16px;
-    outline: none;
-    font-family: inherit;
-    color-scheme: dark;
-    width: 100%;
-}
-
-.field input:focus {
-    border-color: var(--accent);
-}
-
-.place-results {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.place-results:empty {
-    display: none;
-}
-
-.place-option {
-    width: 100%;
-    text-align: left;
-    background: rgba(212, 175, 55, 0.06);
-    border: 1px solid rgba(212, 175, 55, 0.2);
-    border-radius: 8px;
-    color: var(--text);
-    padding: 8px 10px;
-    font-size: 0.85rem;
-    cursor: pointer;
-}
-
-.place-option:hover,
-.place-option:focus-visible {
-    border-color: var(--accent);
-}
-
-.place-chosen {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 0.88rem;
-}
-
-.place-chosen button {
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    padding: 2px 6px;
-}
-
-.insights {
-    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(26, 18, 12, 0.6));
-    border: 1px solid rgba(212, 175, 55, 0.4);
-    border-radius: 12px;
-    padding: 12px 14px;
-    font-size: 0.85rem;
-    line-height: 1.6;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.insights-title {
-    font-family: 'Cinzel', serif;
-    color: var(--accent);
-    font-size: 0.8rem;
-    letter-spacing: 1px;
-    margin-bottom: 4px;
-}
-
-.panel-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.panel-actions .btn-unlock {
-    width: auto;
-    flex: 1;
-}
-
-.btn-link {
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    font-size: 0.82rem;
-    text-decoration: underline;
-    cursor: pointer;
-    padding: 8px;
-}
-
-.btn-link.danger {
-    color: var(--danger);
-    align-self: center;
-    font-size: 0.78rem;
-}
-
-/* --- JOURNAL --- */
-.chip-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.chip {
-    border: 1px solid rgba(212, 175, 55, 0.4);
-    border-radius: 999px;
-    padding: 2px 10px;
-    font-size: 0.78rem;
-    color: var(--accent);
-}
-
-.journal-list {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 14px;
-}
-
-.journal-entry {
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    padding: 12px 14px;
-    background: rgba(13, 9, 6, 0.6);
-}
-
-.journal-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.journal-head .journal-date {
-    margin-right: auto;
-}
-
-.journal-date {
-    color: var(--accent);
-    font-size: 0.75rem;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-}
-
-.journal-delete {
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    padding: 4px 6px;
-}
-
-.journal-question {
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-style: italic;
-    font-size: 1.05rem;
-    margin: 4px 0 8px;
-    overflow-wrap: anywhere;
-}
-
-.journal-thumbs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.journal-thumb {
-    width: 38px;
-    padding: 0;
-    background: none;
-    border: 1px solid rgba(212, 175, 55, 0.5);
-    border-radius: 4px;
-    overflow: hidden;
-    cursor: pointer;
-}
-
-.journal-thumb.personal {
-    box-shadow: 0 0 10px 2px rgba(255, 215, 120, 0.7);
-}
-
-.journal-thumb img {
-    display: block;
-    width: 100%;
-    aspect-ratio: var(--card-ratio);
-    object-fit: cover;
-}
-
-.journal-thumb img.reversed {
-    transform: rotate(180deg);
-}
-
-.journal-tldr {
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    line-height: 1.5;
-    margin-top: 8px;
-}
-
-/* --- PROFILE PORTRAIT: what the cards know --- */
-.portrait {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-}
-
-#portrait-body {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.portrait-head {
-    text-align: center;
-    padding: 4px 28px 0;
-}
-
-.portrait-eyebrow {
-    font-family: 'Cinzel', serif;
-    font-size: 0.7rem;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: var(--text-muted);
-}
-
-.panel .portrait-name {
-    font-size: clamp(1.7rem, 7vw, 2.2rem);
-    letter-spacing: 2px;
-    margin: 6px 0 4px;
-    padding: 0;
-    text-shadow: 0 0 18px var(--accent-glow);
-    overflow-wrap: anywhere;
-}
-
-.portrait-tagline {
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-style: italic;
-    font-size: 1.15rem;
-    color: #fff;
-}
-
-.sign-tiles {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-}
-
-.sign-tile {
-    --el: var(--accent);
-    border: 1px solid rgba(212, 175, 55, 0.35);
-    border-radius: 14px;
-    padding: 14px 6px 12px;
-    text-align: center;
-    background: radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.14), rgba(13, 9, 6, 0.7) 70%);
-    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.4), 0 0 18px -8px var(--el);
-    color: inherit;
-    font-family: inherit;
-}
-
-.sign-tile.element-fire {
-    --el: #ef8a4c;
-}
-
-.sign-tile.element-water {
-    --el: #5fb3e6;
-}
-
-.sign-tile.element-air {
-    --el: #c9d3ee;
-}
-
-.sign-tile.element-earth {
-    --el: #8fc27a;
-}
-
-.sign-glyph {
-    font-family: 'Apple Symbols', 'Segoe UI Symbol', 'Noto Sans Symbols 2', serif;
-    font-size: 2.3rem;
-    line-height: 1.1;
-    color: var(--accent);
-    text-shadow: 0 0 14px var(--accent-glow);
-}
-
-.sign-tile.cusp .sign-glyph {
-    font-size: 1.5rem;
-    line-height: 1.6;
-}
-
-.sign-label {
-    font-size: 0.62rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-top: 8px;
-}
-
-.sign-name {
-    font-family: 'Cinzel', serif;
-    font-size: clamp(0.7rem, 3.2vw, 0.95rem);
-    color: #fff;
-    margin-top: 2px;
-    /* "Sagittarius" is the longest: hyphenate rather than overflow */
-    hyphens: auto;
-    -webkit-hyphens: auto;
-    overflow-wrap: anywhere;
-}
-
-.sign-element {
-    font-size: 0.72rem;
-    color: var(--el);
-    margin-top: 2px;
-}
-
-.sign-hint {
-    font-size: 0.68rem;
-    color: var(--text-muted);
-    margin-top: 6px;
-    line-height: 1.3;
-}
-
-.sign-tile.empty {
-    border-style: dashed;
-    background: rgba(13, 9, 6, 0.5);
-    box-shadow: none;
-}
-
-/* The empty tile's prompt opens the form */
-.add-details {
-    background: none;
-    border: none;
-    font-family: inherit;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-    cursor: pointer;
-    padding: 2px;
-}
-
-.sign-tile.empty .sign-glyph {
-    opacity: 0.35;
-}
-
-.sign-tile.empty:hover,
-.sign-tile.empty:focus-within {
-    border-color: var(--accent);
-}
-
-.portrait-section {
-    text-align: center;
-}
-
-.portrait-section-title {
-    font-family: 'Cinzel', serif;
-    font-size: 0.78rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 12px;
-}
-
-.portrait-cards {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 14px;
-}
-
-.portrait-card {
-    width: 84px;
-    background: none;
-    border: none;
-    color: inherit;
-    cursor: pointer;
-    padding: 0;
-}
-
-.portrait-card img {
-    display: block;
-    width: 100%;
-    aspect-ratio: var(--card-ratio);
-    object-fit: cover;
-    border-radius: 8px;
-    border: 1px solid var(--accent);
-    box-shadow: 0 0 0 2px rgba(255, 244, 207, 0.25), 0 0 18px 3px rgba(255, 215, 120, 0.45);
-    transition: transform 0.25s ease;
-}
-
-.portrait-card:hover img,
-.portrait-card:focus-visible img {
-    transform: translateY(-4px);
-}
-
-.portrait-card-name {
-    font-family: 'Cinzel', serif;
-    font-size: 0.7rem;
-    line-height: 1.25;
-    margin-top: 7px;
-}
-
-.portrait-card-reason {
-    font-size: 0.66rem;
-    color: #ffe7a3;
-    margin-top: 2px;
-}
-
-.portrait-section .hint {
-    margin-top: 10px;
-}
-
-.number-tiles {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-}
-
-.number-tile {
-    border: 1px solid rgba(212, 175, 55, 0.3);
-    border-radius: 14px;
-    padding: 14px 10px;
-    text-align: center;
-    background: rgba(13, 9, 6, 0.55);
-}
-
-.number-value {
-    font-family: 'Cinzel', serif;
-    font-size: 2.3rem;
-    line-height: 1;
-    color: var(--accent);
-    text-shadow: 0 0 16px var(--accent-glow);
-}
-
-.number-label {
-    font-size: 0.62rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-top: 8px;
-}
-
-.number-theme {
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 1.02rem;
-    line-height: 1.3;
-    color: #fff;
-    margin-top: 4px;
-}
-
-.portrait-empty {
-    background: none;
-    border: 1px dashed var(--accent);
-    border-radius: 12px;
-    padding: 16px;
-    color: var(--text);
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 1.1rem;
-    line-height: 1.4;
-    cursor: pointer;
-}
-
-.portrait .panel-actions .btn-unlock {
-    flex: 0 1 260px;
-    margin: 0 auto;
-}
-
-.portrait .btn-link.danger,
-.portrait-privacy {
-    align-self: center;
-    text-align: center;
-}
-
-/* Revealed piece by piece right after saving */
-.portrait.celebrate .reveal-item {
-    animation: revealIn 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
-    animation-delay: calc(var(--d) * 110ms);
-}
-
-@keyframes revealIn {
-    from {
-        opacity: 0;
-        transform: translateY(12px) scale(0.96);
-        filter: blur(4px);
-    }
-
-    to {
-        opacity: 1;
-        transform: none;
-        filter: none;
-    }
-}
-
-@media (max-width: 380px) {
-    .sign-tiles {
-        gap: 6px;
-    }
-
-    .sign-glyph {
-        font-size: 1.9rem;
-    }
-
-    .sign-name {
-        font-size: 0.82rem;
-    }
-
-    .portrait-card {
-        width: 72px;
-    }
-}
-
-/* --- PHONES --- */
-
-/* Narrow screens: give panel content more of the width */
-@media (max-width: 420px) {
-    .panel {
-        padding: 24px 14px 18px;
-    }
-
-    .sign-tile {
-        padding: 12px 3px 10px;
-    }
-
-    .sign-label {
-        letter-spacing: 1px;
-    }
-}
-
-/* Touch screens: finger-sized tap targets (44px is Apple's guideline) */
-@media (pointer: coarse) {
-    button {
-        touch-action: manipulation;
-    }
-
-    .pill-btn {
-        min-height: 40px;
-        min-width: 40px;
-        justify-content: center;
-    }
-
-    .journal-delete,
-    .panel-close,
-    .lightbox-close,
-    .place-chosen button {
-        min-width: 44px;
-        min-height: 44px;
-    }
-
-    .btn-link,
-    .ritual-skip,
-    .legend-link {
-        min-height: 44px;
-    }
-
-    /* Blurring the animated sky every frame is costly on phones: use solid panels */
-    .chat-box,
-    .lightbox,
-    .panel-overlay {
-        backdrop-filter: none;
-    }
-
-    .chat-box {
-        background: rgba(26, 18, 12, 0.92);
-    }
-
-    .lightbox,
-    .panel-overlay {
-        background: rgba(5, 3, 2, 0.94);
-    }
-}
-
-/* The smallest phones (320px): keep five buttons, the moon and the ℞ badge on one row */
-@media (max-width: 360px) {
-    .top-actions {
-        gap: 4px;
-    }
-
-    .pill-btn {
-        min-width: 36px;
-        padding: 6px 8px;
-    }
-
-    .retrograde-badge {
-        padding: 1px 4px;
-    }
 }
 
 /* --- GUIDED TOUR (coachmarks) --- */
@@ -1920,7 +2864,7 @@ button:disabled {
 .tour-bubble {
     position: fixed;
     width: min(330px, calc(100vw - 24px));
-    background: rgba(26, 18, 12, 0.98);
+    background: var(--card);
     border: 1px solid var(--accent);
     border-radius: 14px;
     padding: 14px 16px 16px;
@@ -1941,7 +2885,7 @@ button:disabled {
     left: calc(var(--arrow-x) - 7px);
     width: 12px;
     height: 12px;
-    background: rgba(26, 18, 12, 0.98);
+    background: var(--card);
     border: 1px solid var(--accent);
     transform: rotate(45deg);
 }
@@ -1988,7 +2932,7 @@ button:disabled {
 }
 
 .tour-title {
-    font-family: 'Cinzel', serif;
+    font-family: var(--font-display);
     color: var(--accent);
     font-size: 1.05rem;
     letter-spacing: 1px;
@@ -2031,11 +2975,11 @@ button:disabled {
 }
 
 .tour-next {
-    background: linear-gradient(135deg, #d4af37, #aa8214);
+    background: var(--kumkum);
     border: none;
     border-radius: 10px;
-    color: #0c0806;
-    font-family: 'Cinzel', serif;
+    color: #fff;
+    font-family: var(--font-display);
     font-weight: 700;
     letter-spacing: 1px;
     font-size: 0.82rem;
@@ -2045,7 +2989,7 @@ button:disabled {
 
 .tour-secondary {
     background: none;
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    border: 1px solid var(--line);
     border-radius: 10px;
     color: var(--text-muted);
     font-size: 0.82rem;
@@ -2089,60 +3033,6 @@ button:disabled {
     }
 }
 
-/* --- THE SANCTUM: darkness, the lamp you carry, and the veil it lifts --- */
-/* Width and height are set from JS to match the drawing size */
-#sanctum-canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 0;
-    pointer-events: none;
-}
-
-/* Over the page but under panels and the ritual: away from the lamp, even the
-   cards and the reading sink into shadow */
-.lantern-veil {
-    position: fixed;
-    inset: 0;
-    z-index: 900;
-    pointer-events: none;
-    background: radial-gradient(
-        circle var(--lamp-r, 2000px) at var(--lamp-x, 50%) var(--lamp-y, 40%),
-        transparent 40%,
-        rgba(5, 3, 2, 0.55) 100%
-    );
-    transition: opacity 0.6s ease;
-}
-
-/* On phones the lamp stays where the finger left it, so keep the page readable */
-@media (pointer: coarse) {
-    .lantern-veil {
-        opacity: 0.6;
-    }
-}
-
-/* The watchers' eyes, above the page and its veil but under panels and the ritual */
-#watchers-canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 950;
-    pointer-events: none;
-}
-
-.watched-note {
-    list-style: none;
-    text-align: center;
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-style: italic;
-    color: #d98a6a;
-}
-
-/* The guided tour has its own spotlight */
-body:has(.tour) .lantern-veil {
-    opacity: 0;
-}
-
 /* Sanskrit in Devanagari */
 .deva {
     font-family: 'Tiro Devanagari Sanskrit', 'Noto Serif Devanagari', serif;
@@ -2156,10 +3046,6 @@ body:has(.tour) .lantern-veil {
     justify-content: center;
     gap: 8px;
     margin-top: 10px;
-}
-
-.header-actions .daily-card-btn {
-    margin-top: 0;
 }
 
 /* --- SIGIL: the question, carved --- */
@@ -2238,117 +3124,6 @@ body:has(.tour) .lantern-veil {
     stroke-dashoffset: 0;
 }
 
-/* --- TODAY'S PANCHANG --- */
-#panchang-title .deva {
-    color: var(--text-muted);
-    font-size: 0.8em;
-    margin-left: 6px;
-}
-
-.panchang-body {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin: 16px 0;
-}
-
-.observance {
-    border: 1px solid rgba(212, 175, 55, 0.45);
-    border-radius: 12px;
-    padding: 10px 14px;
-    color: #fff;
-    background: radial-gradient(circle at 0% 50%, rgba(255, 160, 60, 0.16), transparent 70%);
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 1.1rem;
-}
-
-.limb {
-    border-left: 2px solid rgba(212, 175, 55, 0.35);
-    padding: 2px 0 2px 12px;
-}
-
-.limb-head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 4px 10px;
-}
-
-.limb-label {
-    font-size: 0.68rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    min-width: 76px;
-}
-
-.limb-name {
-    font-family: 'Cinzel', serif;
-    color: var(--accent);
-    font-size: 1.05rem;
-}
-
-.limb-deva {
-    color: var(--text-muted);
-}
-
-.limb-detail {
-    color: var(--text);
-    font-size: 0.85rem;
-    line-height: 1.5;
-    margin-top: 3px;
-}
-
-/* --- VEDIC CHART in the portrait --- */
-.vedic-tile .sign-glyph.deva {
-    font-size: 1.6rem;
-    line-height: 1.45;
-}
-
-.vedic-tile.empty .sign-glyph.deva,
-.vedic-tile.cusp .sign-glyph.deva {
-    opacity: 0.5;
-}
-
-.portrait-tagline.vedic-line {
-    color: var(--accent);
-    font-size: 1.05rem;
-}
-
-.vedic-note {
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-size: 1.05rem;
-    line-height: 1.5;
-    color: var(--text);
-    margin-top: 12px;
-}
-
-/* --- CHOOSING THE ORACLE --- */
-.oracle-picker {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 6px;
-}
-
-.oracle-picker button {
-    background: rgba(26, 18, 12, 0.7);
-    border: 1px solid rgba(212, 175, 55, 0.25);
-    color: var(--text-muted);
-    border-radius: 999px;
-    padding: 6px 14px;
-    min-height: 34px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: color 0.2s, border-color 0.2s, box-shadow 0.2s;
-}
-
-.oracle-picker button[aria-pressed="true"] {
-    color: var(--accent);
-    border-color: var(--accent);
-    box-shadow: 0 0 12px var(--accent-glow);
-}
-
 /* --- KAUDI: three heaps of cowries on the cloth --- */
 .cards-tray.layout-kaudi {
     display: grid;
@@ -2366,7 +3141,7 @@ body:has(.tour) .lantern-veil {
 }
 
 .kaudi-pos {
-    font-family: 'Cinzel', serif;
+    font-family: var(--font-display);
     font-size: 0.72rem;
     letter-spacing: 1.5px;
     text-transform: uppercase;
@@ -2464,7 +3239,7 @@ body:has(.tour) .lantern-veil {
 }
 
 .kaudi-aya {
-    font-family: 'Cinzel', serif;
+    font-family: var(--font-display);
     font-size: 1.05rem;
     color: var(--accent);
     margin-top: 2px;
@@ -2475,7 +3250,7 @@ body:has(.tour) .lantern-veil {
 }
 
 .kaudi-heap.testing .kaudi-aya {
-    color: #d98a6a;
+    color: var(--caution);
 }
 
 .kaudi-symbol {
@@ -2484,7 +3259,7 @@ body:has(.tour) .lantern-veil {
 }
 
 .kaudi-meaning {
-    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-family: var(--font-body);
     font-size: 0.98rem;
     line-height: 1.35;
     color: var(--text);
@@ -2494,10 +3269,10 @@ body:has(.tour) .lantern-veil {
 .kaudi-leaning {
     list-style: none;
     text-align: center;
-    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-family: var(--font-body);
     font-style: italic;
     font-size: 1.15rem;
-    color: #fff;
+    color: var(--ink);
 }
 
 @media (max-width: 480px) {
@@ -2521,7 +3296,7 @@ body:has(.tour) .lantern-veil {
     color: var(--accent);
     border-radius: 999px;
     padding: 18px 28px;
-    font-family: 'Cinzel', serif;
+    font-family: var(--font-display);
     letter-spacing: 1.5px;
     font-size: 1rem;
     cursor: pointer;
@@ -2543,154 +3318,54 @@ body:has(.tour) .lantern-veil {
 }
 
 .journal-aya.testing {
-    color: #d98a6a;
-    border-color: rgba(217, 138, 106, 0.4);
+    color: var(--caution);
+    border-color: var(--caution-soft);
 }
 
-/* --- LO SHU GRID in the portrait --- */
-.number-tiles:has(> :nth-child(3)) {
-    grid-template-columns: repeat(3, 1fr);
-}
 
-.lo-shu-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    margin-top: 14px;
-}
-
-.lo-shu-caption {
-    font-family: 'Cinzel', serif;
-    font-size: 0.72rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--text-muted);
-}
-
-.lo-shu {
-    display: grid;
-    grid-template-columns: repeat(3, 64px);
-    grid-auto-rows: 56px;
-    border: 1px solid rgba(212, 175, 55, 0.45);
-    box-shadow: 0 0 18px -6px var(--accent-glow);
-}
-
-.lo-shu-cell {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(212, 175, 55, 0.2);
-    font-family: 'Cinzel', serif;
-    font-size: 1.05rem;
-    letter-spacing: 1px;
-    color: var(--accent);
-    overflow-wrap: anywhere;
-    text-align: center;
-}
-
-.lo-shu-cell.missing {
-    color: rgba(169, 157, 137, 0.25);
-    font-size: 0.85rem;
-}
-
-/* --- WHILE YOU WERE AWAY --- */
-#tagline.uncanny {
-    animation: uncanny 2.4s ease-out;
-}
-
-@keyframes uncanny {
-    0%, 12%, 20% { opacity: 0; }
-    8%, 16% { opacity: 0.8; }
-    24% { opacity: 0.2; filter: blur(1px); }
-    100% { opacity: 1; filter: none; }
-}
-
-/* `rotate` composes with the card's own transform */
-.nudged {
-    rotate: var(--nudge);
-    transition: rotate 1.2s ease;
-}
-
-/* --- ⓘ INFO BUTTONS AND THEIR POPOVERS --- */
-.info-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px;
-    height: 16px;
-    margin-left: 2px;
-    vertical-align: 1px;
-    border-radius: 50%;
-    border: 1px solid currentColor;
-    background: none;
-    color: var(--text-muted);
-    font-family: Georgia, serif;
-    font-style: italic;
-    font-size: 0.66rem;
-    letter-spacing: 0;
-    text-transform: none;
-    line-height: 1;
-    cursor: pointer;
-    position: relative;
-}
-
-/* A bigger target for fingers than the little circle */
-.info-btn::after {
-    content: "";
-    position: absolute;
-    inset: -12px;
-}
-
-.info-btn:hover,
-.info-btn:focus-visible,
-.info-btn[aria-expanded="true"] {
-    color: var(--accent);
-}
-
-.info-pop {
-    position: fixed;
-    z-index: 1500;
-    width: min(290px, calc(100vw - 24px));
-    background: rgba(24, 17, 11, 0.98);
-    border: 1px solid rgba(212, 175, 55, 0.5);
-    border-radius: 12px;
-    padding: 12px 14px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 16px -6px var(--accent-glow);
-    text-align: left;
-}
-
-.info-pop strong {
-    display: block;
-    font-family: 'Cinzel', serif;
-    color: var(--accent);
-    font-size: 0.85rem;
-    letter-spacing: 1px;
-    margin-bottom: 6px;
-}
-
-.info-pop p {
+/* The ritual and the enlarged card are always dark: a moment apart from the page */
+.ritual,
+.lightbox {
+    --text: #f3ead9;
+    --text-muted: #cdbfa6;
+    --accent: #e9b949;
+    --accent-glow: rgba(233, 185, 73, 0.35);
+    --bg: #1a0f08;
+    --personal-ink: #ffe7a3;
     color: var(--text);
-    font-size: 0.84rem;
-    line-height: 1.5;
 }
 
-/* --- JATAKA: the South Indian chart, carved in bronze on basalt --- */
+.ritual {
+    position: fixed;
+    inset: 0;
+    z-index: 1500;
+}
+
+.lightbox {
+    z-index: 1600;
+}
+
+.tour {
+    z-index: 2000;
+}
+
+/* --- JATAKA: the South Indian chart, as a jyotishi draws it --- */
 .south-chart {
+    --chart-line: color-mix(in srgb, var(--kumkum) 45%, transparent);
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     grid-template-rows: repeat(4, minmax(0, 1fr));
     aspect-ratio: 1;
     width: min(100%, 440px);
     margin: 0 auto;
-    border: 1px solid var(--accent);
-    background: rgba(18, 12, 8, 0.9);
-    box-shadow: 0 0 24px rgba(0, 0, 0, 0.7), 0 0 14px var(--accent-glow);
+    border: 2px solid var(--kumkum);
+    background: var(--card);
+    box-shadow: var(--shadow);
 }
 
 .chart-house {
     position: relative;
-    border: 1px solid rgba(212, 175, 55, 0.3);
+    border: 1px solid var(--chart-line);
     padding: 5px 5px 14px;
     display: flex;
     flex-wrap: wrap;
@@ -2700,7 +3375,7 @@ body:has(.tour) .lantern-veil {
     overflow: hidden;
 }
 
-/* The lagna's box is marked with a stroke across its corner, as on a printed chart */
+/* The lagna's box is marked with a stroke across its corner */
 .chart-house.lagna::before {
     content: "";
     position: absolute;
@@ -2708,47 +3383,47 @@ body:has(.tour) .lantern-veil {
     left: 0;
     width: 26%;
     height: 26%;
-    background: linear-gradient(to bottom right, transparent calc(50% - 1px), var(--accent) 50%, transparent calc(50% + 1px));
+    background: linear-gradient(to bottom right, transparent calc(50% - 1px), var(--kumkum) 50%, transparent calc(50% + 1px));
     pointer-events: none;
 }
 
 .chart-house.lagna {
-    background: rgba(212, 175, 55, 0.06);
+    background: var(--kumkum-soft);
 }
 
 .chart-graha {
-    font-family: 'Cinzel', serif;
     font-weight: 700;
-    font-size: clamp(0.66rem, 2.6vw, 0.86rem);
-    color: var(--text);
+    font-size: clamp(0.72rem, 2.8vw, 0.92rem);
+    color: var(--ink);
     white-space: nowrap;
-    transition: opacity 0.5s ease, transform 0.5s ease, color 0.3s;
+    transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
 .chart-graha.chart-lagna {
-    color: var(--accent);
+    color: var(--kumkum);
     font-style: italic;
     margin-left: 22%;
 }
 
 .chart-graha sup {
-    font-size: 0.6em;
-    color: #d98a6a;
+    font-size: 0.62em;
+    color: var(--caution);
     margin-left: 1px;
 }
 
 .chart-degree {
-    font-family: 'Inter', sans-serif;
     font-weight: 400;
     font-size: 0.72em;
-    color: var(--text-muted);
+    color: var(--ink-soft);
     margin-left: 2px;
 }
 
 /* The lords of the running dasha */
 .chart-graha.lord {
-    color: var(--accent);
-    text-shadow: 0 0 10px var(--accent-glow), 0 0 4px rgba(255, 190, 90, 0.6);
+    background: var(--haldi-soft);
+    border-radius: 4px;
+    padding: 0 3px;
+    box-shadow: 0 0 0 1px var(--haldi);
 }
 
 .chart-graha.pending {
@@ -2759,11 +3434,10 @@ body:has(.tour) .lantern-veil {
 .chart-sign {
     position: absolute;
     right: 5px;
-    bottom: 3px;
-    font-size: clamp(0.5rem, 2vw, 0.62rem);
-    color: var(--text-muted);
-    opacity: 0.65;
-    letter-spacing: 0.5px;
+    bottom: 2px;
+    font-size: clamp(0.52rem, 2vw, 0.64rem);
+    color: var(--ink-soft);
+    opacity: 0.8;
 }
 
 .chart-centre {
@@ -2773,28 +3447,29 @@ body:has(.tour) .lantern-veil {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 2px;
     text-align: center;
     padding: 8px;
-    background: radial-gradient(circle, rgba(212, 175, 55, 0.08), transparent 70%);
+    background:
+        radial-gradient(var(--dot) 1.2px, transparent 1.6px) 0 0 / 14px 14px,
+        var(--paper);
+    border: 1px solid var(--chart-line);
 }
 
 .chart-title {
-    font-family: 'Cinzel', serif;
-    color: var(--accent);
-    letter-spacing: 2px;
-    font-size: clamp(0.85rem, 3.4vw, 1.1rem);
+    font-family: var(--font-display);
+    color: var(--kumkum);
+    font-size: clamp(1rem, 4vw, 1.3rem);
 }
 
 .chart-deva {
-    color: var(--accent);
-    font-size: clamp(0.9rem, 3.4vw, 1.15rem);
-    opacity: 0.8;
+    color: var(--ink-soft);
+    font-size: clamp(0.9rem, 3.4vw, 1.1rem);
 }
 
 .chart-caption {
-    color: var(--text-muted);
-    font-size: clamp(0.62rem, 2.4vw, 0.78rem);
+    color: var(--ink-soft);
+    font-size: clamp(0.66rem, 2.5vw, 0.8rem);
 }
 
 .cards-tray.layout-jataka {
@@ -2806,17 +3481,7 @@ body:has(.tour) .lantern-veil {
 .jataka-legend {
     list-style: none;
     text-align: center;
-    font-family: 'Cormorant Garamond', Georgia, serif;
-    font-style: italic;
-    font-size: 1.1rem;
-    color: #fff;
-}
-
-/* --- The jataka panel --- */
-.jataka-body {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+    font-weight: 500;
 }
 
 .jataka-section {
@@ -2829,35 +3494,28 @@ body:has(.tour) .lantern-veil {
     align-items: center;
 }
 
-.varga-toggle {
-    margin-bottom: 4px;
-}
-
 .chart-key {
     text-align: center;
 }
 
 .jataka-heading {
-    font-family: 'Cinzel', serif;
-    color: var(--accent);
-    font-size: 0.95rem;
-    letter-spacing: 1px;
-    font-weight: 500;
-    margin-top: 16px;
+    font-family: var(--font-display);
+    color: var(--kumkum);
+    font-size: 1.15rem;
+    margin-top: 18px;
     padding-bottom: 4px;
-    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+    border-bottom: 1px solid var(--line);
 }
 
 .jataka-heading .deva {
-    font-size: 0.9em;
-    opacity: 0.75;
+    font-size: 0.85em;
+    color: var(--ink-soft);
     margin-left: 4px;
 }
 
 .jataka-line {
-    color: var(--text);
-    font-size: 0.86rem;
-    line-height: 1.5;
+    font-size: 0.98rem;
+    line-height: 1.55;
 }
 
 .table-scroll {
@@ -2867,103 +3525,95 @@ body:has(.tour) .lantern-veil {
 .graha-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.78rem;
+    font-size: 0.86rem;
 }
 
 .graha-table th {
-    font-family: 'Cinzel', serif;
-    font-weight: 500;
-    color: var(--accent);
-    font-size: 0.68rem;
-    letter-spacing: 0.5px;
+    font-weight: 600;
+    color: var(--kumkum);
+    font-size: 0.76rem;
     text-align: left;
     padding: 4px 6px;
 }
 
 .graha-table td {
-    padding: 5px 6px;
-    border-top: 1px solid rgba(212, 175, 55, 0.12);
+    padding: 6px;
+    border-top: 1px solid var(--line);
     white-space: nowrap;
 }
 
 .graha-table .lagna-row td {
-    color: var(--accent);
+    color: var(--kumkum);
+    font-weight: 600;
 }
 
 .graha-deva {
-    color: var(--text-muted);
-    font-size: 0.9em;
+    color: var(--ink-soft);
 }
 
 .graha-notes {
-    color: var(--text-muted);
+    color: var(--ink-soft);
     white-space: normal;
 }
 
 .dasha-now {
-    border: 1px solid var(--accent);
+    border: 1px solid var(--haldi);
+    background: var(--haldi-soft);
     border-radius: 12px;
     padding: 10px 12px;
     display: flex;
     flex-direction: column;
     gap: 4px;
-    box-shadow: 0 0 12px var(--accent-glow);
 }
 
 .dasha-now-row {
     display: flex;
     align-items: baseline;
     gap: 8px;
-    font-size: 0.85rem;
 }
 
 .dasha-level {
-    color: var(--text-muted);
-    font-size: 0.72rem;
-    width: 84px;
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+    width: 90px;
     flex-shrink: 0;
 }
 
 .dasha-lord {
-    font-family: 'Cinzel', serif;
-    color: var(--accent);
+    font-weight: 700;
+    color: var(--kumkum);
 }
 
 .dasha-until,
 .dasha-span {
-    color: var(--text-muted);
-    font-size: 0.75rem;
+    color: var(--ink-soft);
+    font-size: 0.82rem;
     margin-left: auto;
 }
 
 .dasha-md {
-    border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+    border-bottom: 1px solid var(--line);
 }
 
 .dasha-md summary {
     display: flex;
     align-items: baseline;
     gap: 8px;
-    padding: 7px 2px;
+    padding: 9px 2px;
     cursor: pointer;
-    font-size: 0.85rem;
 }
 
 .dasha-md.past summary .dasha-lord {
-    color: var(--text-muted);
-}
-
-.dasha-md.current summary .dasha-lord {
-    text-shadow: 0 0 10px var(--accent-glow);
+    color: var(--ink-soft);
 }
 
 .dasha-ads {
     list-style: none;
-    padding: 0 2px 8px 14px;
+    padding: 0 2px 10px 14px;
     display: flex;
     flex-direction: column;
     gap: 3px;
-    font-size: 0.78rem;
+    font-size: 0.88rem;
 }
 
 .dasha-ads li {
@@ -2972,25 +3622,22 @@ body:has(.tour) .lantern-veil {
 }
 
 .dasha-ads li.past {
-    color: var(--text-muted);
+    color: var(--ink-soft);
 }
 
 .dasha-ads li.current {
-    color: var(--accent);
-}
-
-.chip.now {
-    box-shadow: 0 0 10px var(--accent-glow);
-    border-color: var(--accent);
-}
-
-.chip.past {
-    color: var(--text-muted);
-    border-color: rgba(169, 157, 137, 0.35);
+    color: var(--kumkum);
+    font-weight: 600;
 }
 
 .period-list {
     margin-top: 4px;
+}
+
+.period-list .insights-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 6px;
 }
 
 .gochar-list,
@@ -2998,9 +3645,7 @@ body:has(.tour) .lantern-veil {
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    font-size: 0.84rem;
-    line-height: 1.45;
+    gap: 8px;
 }
 
 .dosha-list {
@@ -3010,20 +3655,14 @@ body:has(.tour) .lantern-veil {
 }
 
 .dosha {
-    border: 1px solid rgba(212, 175, 55, 0.25);
+    border: 1px solid var(--line);
     border-radius: 12px;
     padding: 10px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    background: var(--paper);
 }
 
 .dosha.present {
-    border-color: rgba(217, 138, 106, 0.55);
-}
-
-.dosha.absent {
-    opacity: 0.8;
+    border-color: var(--caution);
 }
 
 .dosha-head {
@@ -3034,74 +3673,36 @@ body:has(.tour) .lantern-veil {
 }
 
 .dosha-head .deva {
-    color: var(--text-muted);
-    font-size: 0.85rem;
+    color: var(--ink-soft);
 }
 
 .dosha-name {
-    font-family: 'Cinzel', serif;
-    color: var(--accent);
-    font-size: 0.88rem;
+    font-weight: 700;
 }
 
 .dosha-status {
     margin-left: auto;
-    font-size: 0.7rem;
-    border: 1px solid currentColor;
-    border-radius: 999px;
-    padding: 1px 8px;
-}
-
-.status-present {
-    color: #e08a6a;
-}
-
-.status-mild {
-    color: #d9b36a;
-}
-
-.status-cancelled {
-    color: #9cc49a;
-}
-
-.status-absent {
-    color: var(--text-muted);
 }
 
 .dosha-detail {
-    font-size: 0.84rem;
-    line-height: 1.45;
+    margin-top: 4px;
+    font-size: 0.94rem;
 }
 
 .dosha-cancel {
-    font-size: 0.8rem;
-    color: #9cc49a;
+    margin-top: 4px;
+    font-size: 0.9rem;
+    color: var(--leaf);
 }
 
 .dosha-absent summary {
     cursor: pointer;
-    color: var(--text-muted);
-    font-size: 0.8rem;
+    color: var(--ink-soft);
     padding: 8px 2px;
 }
 
-.jataka-conventions {
-    margin-top: 14px;
-}
-
-@media (max-width: 420px) {
-    .chart-house {
-        padding: 3px 3px 12px;
-        gap: 1px 4px;
-    }
-
-    .dasha-level {
-        width: 72px;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .chart-graha {
-        transition: none;
+@media print {
+    .south-chart {
+        box-shadow: none;
     }
 }

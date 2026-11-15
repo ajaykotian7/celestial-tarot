@@ -9,8 +9,8 @@ from datetime import date, time
 from typing import Any, Dict, List, Optional
 
 from astrology import birth_chart
-from jyotish import vedic_chart
-from kundali import jataka
+from jyotish import RASHIS, vedic_chart
+from kundali import jataka, moon_timeline
 
 logger = logging.getLogger("uvicorn.error")
 from tarot_engine import MAJOR_ARCANA, TAROT_DECK, card_display_name, card_image_path
@@ -257,6 +257,14 @@ def derive_insights(
         logger.exception("Could not work out the jataka")
         janma_kundali = None
 
+    # Sade Sati, Dhaiya and Guru's transits need only a certain Moon sign
+    moon_sign = None
+    if janma_kundali:
+        moon_sign = next(g for g in janma_kundali["grahas"] if g["key"] == "moon")["sign"]
+    elif vedic and "name" in vedic["rashi"]:
+        moon_sign = [r[0] for r in RASHIS].index(vedic["rashi"]["name"])
+    timeline = moon_timeline(moon_sign, birth_date, today) if moon_sign is not None else None
+
     return {
         "sun": (chart or {}).get("sun"),
         "moon": (chart or {}).get("moon"),
@@ -273,4 +281,5 @@ def derive_insights(
         "numerology": numerology(birth_date, name),
         # The full Vedic birth chart, dashas, transits and doshas (needs time and place)
         "jataka": janma_kundali,
+        "timeline": timeline,
     }

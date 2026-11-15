@@ -1,13 +1,13 @@
 """Build static/audio/ from public-domain (CC0) Freesound recordings.
 
 Downloads each source (Freesound's public MP3 previews, no login needed) into a cache
-folder, then cuts, levels and encodes the four sound files the app plays. Needs ffmpeg.
+folder, then cuts, levels and encodes the three sound files the app plays. Needs ffmpeg.
 
     uv run python scripts/build_audio.py [--cache DIR]
 
 The cut points below were chosen by listening to and analysing each recording; change
 them here and re-run to re-cut a sound. The offsets the app relies on (BREATHS,
-TANPURA_LOOP, the one-second ghungroo slots) are in static/js/sound.js.
+TANPURA_LOOP) are in static/js/sound.js.
 """
 
 import argparse
@@ -38,10 +38,6 @@ SOURCES = {
     "spooky-breath": (
         "https://cdn.freesound.org/previews/341/341751_1487124-hq.mp3",
         '"Spooky Breath" by pqr, https://freesound.org/s/341751/',
-    ),
-    "ghungroo": (
-        "https://cdn.freesound.org/previews/700/700521_1420533-hq.mp3",
-        '"FX Indian Ghungroo Anklet" by bashrambali, https://freesound.org/s/700521/',
     ),
 }
 
@@ -142,15 +138,6 @@ def build_breaths(cache: Path) -> None:
     encode(np.concatenate([slot(inhale, 5), slot(exhale, 5), slot(watcher, 5), slot(gasp, 1)]), "breaths.mp3", "64k")
 
 
-def build_ghungroo(cache: Path) -> None:
-    """Seven unhurried footsteps from the start of the recording, one per one-second slot,
-    each starting just before its step. (Later in the recording the shaking is busier.)"""
-    source = fetch("ghungroo", cache)
-    onsets = [0.7, 2.0, 3.3, 4.75, 6.25, 7.7, 9.15]
-    steps = [fade(decode(source, max(0, t - 0.06), t + 0.94, "highpass=f=70"), 0.01, 0.3) for t in onsets]
-    encode(level(np.concatenate([slot(s, 1) for s in steps]), -22.2), "ghungroo-steps.mp3", "96k")
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--cache", type=Path, help="where to keep downloaded sources (default: a temporary folder)")
@@ -162,7 +149,6 @@ def main() -> None:
         build_tanpura(cache)
         build_bell(cache)
         build_breaths(cache)
-        build_ghungroo(cache)
 
 
 if __name__ == "__main__":

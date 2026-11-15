@@ -1,101 +1,87 @@
-# 🔮 Celestial Tarot AI
+# 🪔 Celestial
 
-An interactive, AI-powered tarot web app. Ask a question and the oracle decides how many cards it deserves, draws them from a full 78-card Rider-Waite-Smith deck using OpenAI function calling, and turns them over one by one before giving its reading, with a TL;DR takeaway at the end. Share your birth date and the reading becomes yours: your rashi and nakshatra, your Western signs, birth card and numbers shape the interpretation, and the oracle remembers the cards that keep finding you. Add your birth time and place and your full jataka appears, drawn in the South Indian style with your dashas, Sade Sati and doshas, and the oracle can answer from it. Every reading also knows today's panchang. The whole thing takes place in the dark inner sanctum of an old temple, lit only by the lamp you carry, where your question is carved into a sigil before the cards are cut.
+A family almanac and reader. Open it in the morning to see today's panchang, Rahu Kaal and the good hours on a day wheel, and how the day sits with each person's birth Moon. Keep everyone's jataka in one place, drawn in the South Indian style with their dashas, Sade Sati, doshas and yogas, and see each life laid out year by year. Match two charts, find a good day to start something, see the month's festivals and fasts, and ask the reader anything about anyone in the family. It reads their jataka for timing, with the tarot or the cowries for guidance, in the family's own language.
 
-Deployed live on **Render**.
+It installs to the phone's home screen, and everyone's birth details stay on the device. Deployed on **Render**.
 
 ---
 
 ## ✨ Features
 
-### The reading
+### ☀️ Today
 
-- **Spread sized to the question:** The model picks the spread that fits each new question:
-  - **One card:** simple or yes/no questions and daily guidance.
-  - **Past · Present · Future:** how a situation is unfolding over time.
-  - **Situation · Obstacle · Advice:** a problem, dilemma or decision.
-  - **Celtic Cross (10 cards):** only extremely deep or complex questions with many intertwined factors.
-- **Choose your oracle:** Above the question box, pick **🃏 Cards**, **🐚 Kaudi**, **🪐 Jataka**, or **✦ Let the oracle choose**, in which case the model decides which oracle the question needs (cowries for "will it happen?", the tarot for feelings, choices and understanding, and your jataka for timing, life periods, career, marriage, Sade Sati and doshas).
-- **Jataka readings:** With your birth time and place saved, **🪐 Jataka** answers from your own birth chart: the mahadasha, antardasha and pratyantardasha you are in, Shani, Guru, Rahu and Ketu's transits from your Moon, your natal houses, doshas and yogas. Timing is given as dasha periods and tendencies, never certainties. The reader never predicts death, illness, accidents or divorce, always gives a dosha's cancellations alongside it, never suggests gemstones or paid pujas, and defers to your family jyotishi. Your chart appears on the table with the running dasha lords glowing as the grahas take their places.
-- **Kaudi prashna:** A cowrie-shell reading inspired by the cowrie counting of Kerala's Ashtamangala prashna. A handful of the 108 shells falls onto a red cloth in three heaps (what has been, what is, what is coming). Each heap is counted away in eights, and the shells that remain (1 to 8) name one of the eight ayas: Dhwaja the flag, Dhooma smoke, Simha the lion, Shwana the dog, Vrishabha the bull, Khara the donkey, Gaja the elephant, Kaka the crow. Odd ayas are favourable and even ones ask for patience, as in Vastu. The server casts the shells, so they are as random as the cards. Mapping remainders to the ayas is this app's own reading, not a fixed tradition.
-- **Follow-up questions:** Once cards are on the table, further questions are answered from those cards without drawing again. **✦ New reading** clears the table for a fresh question.
-- **Full 78-card deck:** All 22 Major Arcana and 56 Minor Arcana, each with its own upright and reversed meaning, and the original Rider-Waite-Smith artwork.
-- **OpenAI tool calling:** The model calls `draw_spread` and `get_tarot_meaning`, which run in Python, so the cards are genuinely random rather than invented by the model.
-- **TL;DR takeaway:** A 2–3 sentence summary in a gilded box above the full reading.
+- **The day wheel:** Sunrise on the left, sunset on the right. The day's eight choghadiyas arc over the top and the night's eight below, coloured good, neutral or to avoid. Rahu Kaal, Yamaganda, Gulika and Abhijit muhurta ride outside the ring, a sun (or moon) marks where you are in the day, and the centre says the current choghadiya and when Rahu Kaal is. Tap a segment for its meaning.
+- **The panchang at sunrise**, as printed calendars fix it: tithi, vara, nakshatra, yoga and karana with Devanagari names and end times, the lunar month (amanta, with adhika months), and the real moon phase.
+- **For the person you're looking at:** where the day's Moon is from their birth Moon (Chandra bala), their tara (Tara bala), a Chandrashtama warning, their running dasha and Sade Sati, and a one-line guide to the day.
+- **Coming up this week:** festivals, fasts and sankrantis.
+- **A card for today** that turns over when tapped.
+- **Where you are:** sunrise and everything after it is worked out for the place you choose (city search or "use my location"), not the birth place.
 
-### Personal readings
+### 🔮 Ask
 
-- **"Let the cards know you":** An optional profile, offered after the first unlock and editable from **☉ You** in the top bar:
-  - **Name:** the reader addresses you by it.
-  - **Date of birth:** your **sun sign** and element, your **birth card** (Mary K. Greer's method), **life path number**, and **personal year**.
-  - **Birth time and place** (optional): your exact **moon sign** and your **rising sign**. Without a birth time, a sign that changed on your birthday is shown as a cusp rather than guessed.
-- **Your celestial portrait:** After saving, "What the cards know" is revealed piece by piece: Sun, Moon and Rising tiles with their zodiac glyphs and elements, the artwork of the cards that are yours, and your life path and personal year. **✎ Edit details** reopens the form with what you entered.
-- **Personal cards glow:** If your birth card, or the card of your sun, moon or rising sign (e.g. Scorpio ↔ Death), appears in a spread, it glows with a ★ note and its own chime, and the reader calls it out.
-- **Reading journal:** Every reading is saved to **📖 Journal** with its question, cards and takeaway. The reader sees your last 5 readings, so it can notice cards that keep returning and themes that continue.
-- **Your numbers:** Indian numerology alongside the life path: your **Moolank** (root number, from the day) and **Bhagyank** (destiny number, from the whole date), each with its ruling graha, a Chaldean **name number** from the name you give, and your **Lo Shu grid**, showing which numbers repeat, which are missing (with the area of life each stands for) and any complete planes such as the Will plane or Golden Raj Yoga. The reader is told the numbers, the missing ones and the planes, never the date.
-- **Card of the day:** **✦ Your card for today** is drawn from your birth date and today's date, so it stays the same all day.
-- **A gentle reader:** The reader always speaks gently, softening difficult cards without hiding what they say, and sizes each answer to the question: brief for simple questions, thorough for deep ones.
-- **Your Vedic chart:** The portrait also shows "In the Vedic sky": your **rashi** (the Moon's sidereal sign), your **janma nakshatra** with its deity, symbol, ruling graha and (with a birth time) pada, and your **lagna**, each with its Devanagari name. If your Vedic Sun sits in a different sign from your Western one, it says so. Without a birth time, a nakshatra or rashi that changed on your birthday is shown as alternatives rather than guessed.
-- **🪐 Your jataka:** Under the title, with a birth time and place:
-  - **The chart** in the South Indian style (fixed rashi boxes, the lagna marked across its corner), with a **Rasi / Navamsa** toggle. Each graha shows its degree and ᴿ when retrograde, and the lords of the running dasha glow.
-  - **The grahas:** rashi, degree, nakshatra and pada, house, and whether each is exalted, debilitated, in its own sign, retrograde or combust.
-  - **Vimshottari dasha:** the mahadasha, antardasha and pratyantardasha running now with their end dates, and all nine mahadashas of your life, each opening to its antardashas.
-  - **Sade Sati and Dhaiya:** whether Shani is passing your Moon now (and in which phase), and every Sade Sati, Kantaka and Ashtama Shani period in your lifetime.
-  - **Gochar today:** where Shani, Guru, Rahu and Ketu are, counted from your Moon and lagna, and until when.
-  - **Doshas:** Mangal (Kuja/Chevvai) dosha with its traditional cancellations, Kaal Sarp (full or partial, with its type), Sade Sati, Shani Dhaiya, Pitru, Grahan, Guru Chandal, Angarak, Shrapit, Vish, Punarphoo, Kemadruma, Shakata, Gandmool, Naga (Rahu–Ketu, as weighed in South Indian matching) and Amavasya dosha, each marked present, mild, cancelled or not present with the reason.
-  - **Yogas:** Gaja Kesari, Budhaditya, Chandra-Mangal, the five Mahapurusha yogas, Sunapha, Anapha, Durudhara and Neecha Bhanga.
-  - Worked out with the Lahiri ayanamsa, mean Rahu and Ketu, whole-sign houses and 365.25-day dasha years, the conventions of most printed Indian charts; transit dates are in IST, as in Indian panchangs.
-- **Today's panchang:** 🪔 under the title shows the current tithi and nakshatra; tap it for all five limbs (tithi, vara, nakshatra, yoga and karana), with when the tithi and nakshatra end and any observance such as Ekadashi, Pradosh or Amavasya. It's worked out for the moment you look, with the Lahiri ayanamsa, and the reader weaves it into every reading.
-- **Live astrology:** The current astrological season, and Mercury retrograde (shown as ☿ ℞), are woven into every reading.
+- **One consultation:** with "Reader decides", the reader reads the person's jataka for *when* and *why* (dashas, transits, houses and their lords), and draws tarot cards or casts the cowries for *how*. Or choose 🃏 Cards, 🐚 Kaudi or 🪐 Jataka alone.
+- **About anyone in the family:** "Asking about" picks the person; when it isn't you, the reader speaks to you about them.
+- **Topics** (career, money, marriage, health, children, studies, travel, home…) focus the reading and offer starter questions.
+- **In your language:** English, Hindi, Kannada, Tamil, Telugu, Malayalam, Marathi, Gujarati or Bengali, written simply enough for elders.
+- **The jataka on the table:** for a jataka reading the chart appears with the dasha lords marked, the grahas taking their places one by one; a combined reading shows the dasha it was read in.
+- **The ritual** (optional): the question carved into a sigil, a breath, cutting the deck or letting the shells fall.
+- **Share** a reading as an image (for WhatsApp), copy it as text, or ask follow-ups.
+- **Past readings** are kept per person, and the reader notices cards and themes that return.
+- **A gentle reader:** timing is given as periods and tendencies, never certainties; no predictions of death, illness, accidents or divorce; doshas always come with their cancellations; no gemstones or paid pujas; the family jyotishi comes first.
+- **Tarot:** all 78 Rider-Waite-Smith cards with their original art, in spreads sized to the question (one card, three cards, or the Celtic Cross). **Kaudi:** a handful of 108 cowries in three heaps, each counted in eights to one of the eight ayas, inspired by Kerala's Ashtamangala prashna. Both are drawn at random on the server, never by the model.
+
+### 〰️ Timeline
+
+- A whole life, year by year: **mahadashas and antardashas**, **Sade Sati and Dhaiya**, and **Guru's passage** through the signs (favourable houses from the Moon marked), with a line for today.
+- **Life events:** add what happened (married, a new job, a move); they appear on the timeline and the reader connects them to the periods.
+- Tap any period for what its lord brings, where it sits and what it rules in the chart, and to ask the reader about it.
+
+### 👪 Family
+
+- **Everyone's chart**, kept on the device: name, relation, birth date, time and place.
+- **The jataka**, in the South Indian style with a Rasi / Navamsa switch: the nine grahas with degree, nakshatra and pada, house, dignity, retrograde and combust; Vimshottari dasha to pratyantar; Sade Sati and Dhaiya; gochar; **16 doshas** (Mangal with its cancellations, Kaal Sarp, Sade Sati, Shani Dhaiya, Pitru, Grahan, Guru Chandal, Angarak, Shrapit, Vish, Punarphoo, Kemadruma, Shakata, Gandmool, Naga and Amavasya), each present, mild, cancelled or not present with the reason; and yogas (Gaja Kesari, Budhaditya, Chandra-Mangal, the five Mahapurusha, Sunapha, Anapha, Durudhara, Neecha Bhanga).
+- **Print or save as PDF** for the family jyotishi.
+- Rashi, nakshatra and lagna; Western signs; Moolank, Bhagyank, life path, personal year and the Lo Shu grid; birth and sign cards.
+- **Kundali matching:** Ashtakoota guna milan out of 36 (Varna, Vashya, Tara, Yoni, Graha Maitri, Gana, Bhakoot, Nadi), Nadi and Bhakoot dosha with their cancellations, and both people's Mangal dosha. Add a proposal's details as a person to match against.
+
+### 📅 Calendar
+
+- **The month** as a panchang prints it: each day's tithi, purnima and amavasya, festivals (Ugadi, Ram Navami, Akshaya Tritiya, Guru Purnima, Raksha Bandhan, Janmashtami, Ganesh Chaturthi, Navaratri, Dussehra, Karwa Chauth, Dhanteras, Deepavali, Bhai Dooj, Vasant Panchami, Maha Shivaratri, Holi and more), monthly fasts (Ekadashi, Pradosh, Sankashti, Masik Shivaratri, Purnima, Amavasya) and sankrantis.
+- **Personal dates** for the person: dasha changes, Sade Sati beginning and ending, Shani, Guru and Rahu changing sign, and Chandrashtama days.
+- **Find a good time:** the best days in the next two months to start a job, travel, buy a vehicle, move house, begin studies or buy gold, from the tithi, nakshatra, weekday and the person's birth Moon, with each day's good hours (Abhijit and the good choghadiyas, with Rahu Kaal, Yamaganda and Gulika cut out).
+- **Add to my calendar:** the month's items as an .ics file for any calendar app.
+
+### Look and feel
+
+- Cream paper, kumkum red and turmeric gold, on a faint grid of kolam dots, with a dark mode; kolams that draw themselves, a flickering diya while the reading table is empty, a bindi marking the open tab.
+- **Bigger text** for elders, light or dark or automatic, optional tanpura drone and temple bell.
+- **Installs as an app** (home screen, full screen) and opens offline.
+- Respects reduced motion.
 
 ### Privacy
 
-- The profile and journal are stored **only in your browser**. The server stores nothing.
-- Your birth date, time and place are sent to the server only to work out your signs and numbers. **Only those derived traits (and your name) are sent to OpenAI**, never the birth details themselves.
-- The full jataka (degrees, dates) is shown only in your browser. When the oracle reads it, it gets a summary in words: each graha's rashi and house, the dasha periods around now, current transits, Sade Sati, doshas and yogas. No degrees, no birth details, and no date in your birth year. A summary that detailed could still let a determined reader narrow down when you were born, so keep that in mind before sharing the app beyond family.
-- Your last few readings (questions, cards and takeaways) are included in the prompt so the reader can spot patterns.
-- City search for the birth place goes straight from your browser to [Open-Meteo](https://open-meteo.com/).
-- **Forget me** in the profile panel erases the profile and journal from the device.
-
-### Getting around
-
-- **Guided tour:** After unlocking for the first time, a short tour spotlights each control (the question box, tonight's sky, the ritual, sound, the card of the day, the journal and your profile), with a one-tap "Turn sound on" along the way. It ends by inviting you to share your birth date. It includes the watchers in the dark, choosing your oracle and your jataka. **✦ How this works** at the bottom of the page replays it, and after a major release everyone sees it once more.
-
-### Atmosphere
-
-- **3D card reveal:** Cards are dealt face-down and flip over one at a time. Reversed cards appear upside down, as a reader would see them. Tap any card to see it enlarged with its meaning.
-- **The sanctum:** The page sits in near-darkness. A lamp follows your cursor, your finger or keyboard focus, flickering and swaying as if carried, and its light reveals pillars, an arch and a yantra carved into the walls. Watchers gather in the dark: eyes that creep toward your reading (the cards, or the question you're typing) and wait at the edge of your light, staring at it. Carry your lamp to them (move the cursor, or tap near them) and they flee. Typing a question draws them sooner. Leave one watching when you press Consult and the reading is marked "Something watched this reading", and the reader adds one gentle line inviting you to trust what rings true. The cards themselves are never affected. The eyes are drawn above the page, so they can't hide behind it, and none appear until you've unlocked. Each watcher is one of four kinds:
-  - **Amber eyes** arrive with ghungroo (anklet bells) stepping closer from the side they appear on, and run off jingling when caught.
-  - **A serpent's eyes**, yellow-green with thin slits, never blink and arrive with a hiss.
-  - **Pale eyes** have no pupils and arrive with a breath.
-  - **The temple cat** means no harm: it doesn't creep, doesn't cloud readings, and wanders off slowly when the light finds it.
-- **Omens:** At most once every 40–90 seconds, and never during a reading or the ritual, a few bats cross the lamplight with wings beating across the speakers, or a draft gusts through and bows the lamp to an ember before it slowly catches again. The light flares as the cards turn. On Amavasya the sanctum grows darker and more things watch.
-- **Heartbeat and breath:** With sound on, a low heartbeat starts while the oracle prepares the reading and quickens as each card turns or each heap of shells falls. Breathing follows the ritual's breaths, a breath sounds close by when something watches from the dark, and a sharp in-breath when your lamp catches it.
-- **While you were away:** Leave the tab for a while and come back to find the lamp guttered and slowly catching again, a new line under the title ("You left. The cards didn't."), and one card or heap on the table turned slightly from where it lay.
-- **Pre-reading ritual:** Your question is carved into a sigil by the old method (vowels and repeated letters dropped, the rest traced across the Lo Shu square), then you breathe in and out as it glows, it sinks into the deck, and you cut the deck and choose a pile (for kaudi, you let the shells fall). The same question always makes the same sigil, and each journal entry shows its own. It plays while the reading is being fetched, so it fills the wait instead of adding to it. It can be skipped, or turned off with the ✦ toggle.
-- **Ambient sound:** A real **tanpura** drone, looped seamlessly, beneath everything. The core takeaway rings a brass **temple bell** (ghanta). Breathing is a real, close breath, and the watchers' footsteps are real **ghungroo**, played at a distance through a stone-room echo. Shuffle, cut, flip, heartbeat, wings, wind and the other effects are synthesised with the Web Audio API. The recordings (about 0.5 MB) load only once sound is turned on, and synthesised stand-ins play until they arrive. Sound is **off by default**, and the 🔊 toggle is remembered between visits.
-- **Living sky:** Twinkling stars, drifting dust, the occasional shooting star, slow mist, and candlelight flickering behind the cards.
-- **Real moon phase:** The current moon is drawn in the sky and named in the top bar, and the reader weaves its symbolism into the reading.
-- **Witching hour:** Between midnight and 4am in the user's local time, the palette turns blood-red and the reader's tone grows darker and more uncanny.
-- **Haptics:** A short vibration on each card flip, on Android browsers that support it.
-- **Reduced motion:** With the system's reduce-motion setting on, the sky stands still, cards fade in instead of flipping, and the ritual drops its animations.
+- People, birth details, life events and readings are stored **only in the browser**. The server stores nothing.
+- Birth details reach the server only to work out signs, charts and dates. **OpenAI never sees them**: the reader gets the name, the derived traits, and a summary of the jataka in words (signs and houses, dasha periods around now, transits, doshas and yogas; no degrees and no date in the birth year). Life events and recent readings are included so the reader can connect them. Even a summary can let a determined reader narrow down a birth date, so keep the app to family.
+- City search goes from the browser to [Open-Meteo](https://open-meteo.com/).
+- **Erase everything** in Settings clears the device.
 
 ### Protection
 
-- **Passphrase gatekeeper:** When `APP_ACCESS_PIN` is set, the app is locked behind a passphrase screen and the API rejects requests without it. Case and extra spaces are ignored, and attempts are limited to 5 per minute per IP.
-- **IP rate limiting:** 5 readings per minute per IP, using the proxy-added `X-Forwarded-For` entry so clients can't spoof their way around it.
-- **Input and token caps:** Questions are capped at 1,000 characters and only the last 6 history messages reach the model. Each completion is capped at 700 tokens, or 1,200 for a Celtic Cross.
-- **Safe rendering:** Model output is always rendered as plain text, never as HTML.
+- **Passphrase gate:** with `APP_ACCESS_PIN` set, the app and every API that does real work need the passphrase. Case and extra spaces are ignored; 5 attempts a minute per IP.
+- **Rate limiting:** 5 readings per minute per IP, from the proxy-added `X-Forwarded-For` entry.
+- **Caps:** questions up to 1,000 characters, the last 6 history messages, 700 tokens per answer (1,200 for a Celtic Cross, a jataka reading or an Indian language), calendars up to 92 days.
+- **Clear errors:** an expired OpenAI key, exhausted credit or rate limiting is named plainly; anything else is logged on the server only.
+- Model output is always rendered as text, never HTML.
 
 ---
 
 ## 🛠️ Tech Stack
 
 - **Backend:** Python 3.14+, [FastAPI](https://fastapi.tiangolo.com/), [Uvicorn](https://www.uvicorn.org/)
-- **AI / LLM:** [OpenAI Python SDK](https://github.com/openai/openai-python) (GPT-4o with function calling)
+- **AI:** [OpenAI Python SDK](https://github.com/openai/openai-python) (GPT-4o with function calling)
+- **Astronomy:** [Skyfield](https://rhodesmill.org/skyfield/) with an excerpt of NASA JPL's DE440s ephemeris (Sun, Moon and Mercury to Saturn, 1900–2100): sunrise and sunset, the Lahiri sidereal chart, panchang, dashas, transits and the festival calendar
+- **Frontend:** vanilla HTML, CSS and JavaScript ES modules, SVG for the day wheel, charts and kolams, Canvas for share images, Web Audio for sound, a service worker for install and offline. No build step.
 - **Package management:** [uv](https://github.com/astral-sh/uv)
-- **Frontend:** Vanilla HTML, CSS (3D transforms, keyframe animations, Grid) and JavaScript ES modules, with Canvas for the sky and the Web Audio API for sound. No build step.
-- **Astronomy:** [Skyfield](https://rhodesmill.org/skyfield/) with NASA JPL's DE440s ephemeris for sun, moon and rising signs, Mercury's motion, and (with the Lahiri ayanamsa) the Vedic chart, panchang and jataka
 - **Hosting:** [Render](https://render.com) (Web Service)
 
 ---
@@ -105,42 +91,46 @@ Deployed live on **Render**.
 ```text
 tarot-space/
 ├── static/
-│   ├── index.html          # Page markup: gatekeeper, table, ritual, panels, card lightbox
-│   ├── css/style.css       # Theme, card flip, layouts, witching hour, reduced motion
+│   ├── index.html              # Gate, app shell, tabs, sheet, ritual, card view
+│   ├── css/style.css           # Theme (light and dark), layout, chart, wheel, cards, ritual
 │   ├── js/
-│   │   ├── main.js         # App flow: PIN, readings vs follow-ups, toggles
-│   │   ├── profile.js      # Profile panel, place search, derived insights
-│   │   ├── journal.js      # Reading journal and the summary sent to the oracle
-│   │   ├── tour.js         # First-run guided tour (coachmarks)
-│   │   ├── cards.js        # Dealing, flipping and enlarging cards
-│   │   ├── ritual.js       # Sigil / breathe / cut / choose-a-pile ritual
-│   │   ├── sigil.js        # Sigil from a question, traced on the Lo Shu square
-│   │   ├── kaudi.js        # Cowrie heaps falling, counted in eights, read
-│   │   ├── jataka.js       # South Indian chart, jataka panel, the chart on the table
-│   │   ├── omens.js        # Rare bats and drafts in the sanctum
-│   │   ├── sanctum.js      # The dark sanctum: the lamp, wall carvings and watching eyes
-│   │   ├── panchang.js     # Today's panchang button and panel
-│   │   ├── sky.js          # Canvas stars, dust, shooting stars and moon
-│   │   ├── sound.js        # Web Audio drone and sound effects
-│   │   └── util.js         # Shared helpers
-│   ├── audio/              # Tanpura loop, temple bell, breaths, ghungroo (CC0 recordings)
-│   └── cards/              # 78 Rider-Waite-Smith card images (WebP)
-├── app.py                  # FastAPI server, guardrails, and the agent loop
-├── tarot_engine.py         # Deck, meanings, spreads, and OpenAI tool schemas
-├── celestial.py            # Moon phase and witching-hour helpers
-├── astrology.py            # Sun, moon and rising signs; season; Mercury retrograde
-├── personal.py             # Birth cards, numerology (incl. Moolank, Bhagyank, Lo Shu), sign cards, card of the day
-├── jyotish.py              # Sidereal (Lahiri) rashi, nakshatra, lagna and panchang
-├── kaudi.py                # Kaudi prashna: cast cowries into three heaps, the eight ayas
-├── kundali.py              # Jataka: nine grahas, houses, navamsa, dashas, Sade Sati, gochar, doshas, yogas
-├── data/de440s-excerpt.bsp # JPL ephemeris excerpt (Sun, Moon, Earth, Mercury to Saturn, 1900–2100)
-├── scripts/build_audio.py  # Rebuilds static/audio/ from the CC0 recordings
-├── tests/                  # pytest suite (OpenAI mocked)
-├── requirements.txt        # Production dependencies for Render
-├── pyproject.toml          # Project configuration (uv, pytest)
-├── uv.lock                 # Pinned lockfile
-├── .env.example            # Template for environment variables
-└── .gitignore              # Ignores .env, .venv, and caches
+│   │   ├── main.js             # Shell: gate, tabs, person picker, settings, tour
+│   │   ├── store.js            # People, who the app is looking at, where you are, settings
+│   │   ├── api.js              # Requests (with the passphrase), cached insights
+│   │   ├── today.js            # Today: day wheel, panchang, the day for a person
+│   │   ├── ask.js              # Ask: the consultation, topics, methods, follow-ups
+│   │   ├── timeline.js         # Timeline: a life year by year, life events
+│   │   ├── family.js           # Family: people, their jataka, the form, matching
+│   │   ├── calendar.js         # Calendar: the month, personal dates, muhurats, .ics
+│   │   ├── jataka.js           # South Indian chart and jataka sections
+│   │   ├── journal.js          # Past readings, per person
+│   │   ├── share.js            # Share image, text, print for the jyotishi
+│   │   ├── sheet.js            # Bottom sheets
+│   │   ├── places.js           # City search and "use my location"
+│   │   ├── kolam.js            # Kolams that draw themselves
+│   │   ├── cards.js, kaudi.js  # Dealing and flipping cards, cowries falling
+│   │   ├── ritual.js, sigil.js # The pre-reading ritual and its sigil
+│   │   ├── sound.js, tour.js   # Web Audio, the coachmark tour
+│   │   └── util.js             # Shared helpers
+│   ├── sw.js                   # Service worker (install, offline)
+│   ├── manifest.webmanifest    # Home-screen app
+│   ├── icons/                  # App icons
+│   ├── audio/                  # Tanpura loop, temple bell, breaths (CC0)
+│   └── cards/                  # 78 Rider-Waite-Smith card images (WebP)
+├── app.py                      # FastAPI: endpoints, guardrails, prompts, the reading
+├── kundali.py                  # Jataka: grahas, houses, dashas, transits, doshas, yogas
+├── muhurta.py                  # Sunrise, Rahu Kaal, choghadiya, Tara/Chandra bala, muhurats
+├── festivals.py                # Lunar months, festivals, fasts, sankrantis, personal dates
+├── matching.py                 # Ashtakoota guna milan
+├── jyotish.py                  # Sidereal rashi, nakshatra, lagna and the panchang
+├── astrology.py                # Ephemeris access, Western signs, season, Mercury
+├── personal.py                 # Numerology, birth cards, card of the day, insights
+├── tarot_engine.py             # Deck, meanings, spreads, tool schemas
+├── kaudi.py                    # Kaudi prashna
+├── celestial.py                # Moon phase
+├── data/de440s-excerpt.bsp     # JPL ephemeris excerpt
+├── scripts/build_audio.py      # Rebuilds static/audio/ from CC0 recordings
+└── tests/                      # pytest suite (OpenAI mocked)
 ```
 
 ---
@@ -248,48 +238,68 @@ Set these in the Render Dashboard under **Environment**:
 
 ---
 
+---
+
 ## 📡 API Reference
 
-### `POST /api/verify-pin`
-
-Checks the passphrase before letting the user past the gatekeeper screen. Matching ignores case and extra spaces.
-
-- **Headers:** `x-app-pin: <PIN>`
-- **Responses:**
-  - `200` `{"status": "unlocked", "pin_required": true}` when the PIN matches.
-  - `200` `{"status": "unlocked", "pin_required": false}` when no `APP_ACCESS_PIN` is configured.
-  - `401` when the PIN is wrong.
-  - `429` after 5 attempts in a minute from the same IP.
-
-### `GET /api/sky`
-
-The current sky and today's panchang, shown in the UI. No PIN required.
-
-- **Query:** `local_date` (optional, `YYYY-MM-DD`), which sets the vara (weekday).
+All `POST` endpoints take and return JSON. Those that do real work need the passphrase in an `x-app-pin` header when `APP_ACCESS_PIN` is set (`401` otherwise). A `place` is `{"latitude": 19.07, "longitude": 72.88, "timezone": "Asia/Kolkata"}`; a `profile` is a person:
 
 ```json
 {
-  "moon": {"name": "Waning Gibbous", "emoji": "🌖", "fraction": 0.6512},
-  "season": "Scorpio",
-  "mercury_retrograde": false,
-  "panchang": {
-    "tithi": {"number": 20, "name": "Panchami", "devanagari": "पंचमी", "paksha": "Krishna", "paksha_devanagari": "कृष्ण", "paksha_meaning": "the dark, waning fortnight", "observance": null},
-    "vara": {"name": "Shukravara", "devanagari": "शुक्रवार", "lord": "Shukra (Venus)"},
-    "nakshatra": {"name": "Ardra", "devanagari": "आर्द्रा", "deity": "Rudra, the storm", "symbol": "a teardrop", "theme": "storms that clear the air", "lord": "Rahu (north lunar node)"},
-    "yoga": {"name": "Shiva", "devanagari": "शिव", "meaning": "auspiciousness", "inauspicious": false},
-    "karana": {"name": "Taitila", "devanagari": "तैतिल", "bhadra": false},
-    "moon_rashi": "Mithuna",
-    "tithi_ends": "2026-10-30T13:55+00:00",
-    "nakshatra_ends": "2026-10-31T01:42+00:00"
-  }
+  "name": "Ajay", "relation": "self",
+  "birth_date": "1990-07-15", "birth_time": "14:30",
+  "timezone": "Asia/Kolkata", "latitude": 19.07, "longitude": 72.88,
+  "events": [{"when": "2015-02", "label": "married"}]
 }
 ```
 
-`fraction` is the position in the lunar cycle: `0` is a new moon and `0.5` is a full moon. `season` is the Sun's current (tropical) sign. The panchang is for this moment; traditional calendars fix each day's tithi at sunrise, so around a change they can differ by a day. `observance` names Ekadashi, Pradosh, Purnima, Amavasya and similar days, and `bhadra` is true during Vishti karana.
+Every profile field is optional (`name` up to 40 characters, `relation` up to 24, up to 40 `events` with `when` as `YYYY` or `YYYY-MM` and `label` up to 80). Times in responses are ISO 8601 in the place's time zone.
+
+### `POST /api/verify-pin`
+
+Checks the passphrase (header `x-app-pin`). `200` `{"status": "unlocked", "pin_required": true|false}`, `401` if wrong, `429` after 5 attempts a minute.
+
+### `POST /api/day` (passphrase)
+
+Today for a place, and optionally a person. Body: `place`, `local_date`, `profile` (optional).
+
+```json
+{
+  "date": "2026-11-15",
+  "sunrise": "2026-11-15T06:45:12+05:30", "sunset": "2026-11-15T18:00:30+05:30", "next_sunrise": "...",
+  "panchang": {"tithi": {...}, "vara": {...}, "nakshatra": {...}, "yoga": {...}, "karana": {...}, "moon_rashi": "...", "tithi_ends": "...", "nakshatra_ends": "..."},
+  "month": "Kartika",
+  "periods": {
+    "rahu_kaal": {"start": "...", "end": "..."}, "yamaganda": {...}, "gulika": {...}, "abhijit": {...} | null,
+    "choghadiya": [{"name": "Udveg", "quality": "bad", "meaning": "...", "part": "day", "start": "...", "end": "..."}]
+  },
+  "today": [{"kind": "festival", "name": "...", "note": "..."}],
+  "coming": [{"date": "2026-11-17", "items": [...]}],
+  "moon": {"name": "Waxing Crescent", "emoji": "🌒", "fraction": 0.18},
+  "personal": {"moon_house": 8, "chandra_bala": false, "tara": "Sadhana", "tara_good": true, "chandrashtama": true, "mood": "caution", "guidance": "..."} | null,
+  "dasha": {"mahadasha": "Chandra", "antardasha": "Chandra", "pratyantardasha": "Budh"} | null,
+  "sade_sati": {"phase": "peak", "start": "...", "end": "..."} | null,
+  "daily_card": {"card": "The Star", "orientation": "upright", "meaning": "...", "image": "..."}
+}
+```
+
+`abhijit` is `null` on Wednesdays. `personal` needs a certain birth Moon (a birth time, if the Moon changed nakshatra that day); `dasha` needs birth time and place.
+
+### `POST /api/calendar` (passphrase)
+
+Body: `place`, `start` (date), `days` (1–92, default 31), `profile` (optional). Returns `{"days": [...]}`, each with `date`, `tithi` (`number`, `name`, `paksha`, at sunrise), `nakshatra`, `month` (e.g. `"Ashwin"` or `"Adhika Jyeshtha"`), `sunrise`, `sunset` and `items`: `{kind, name, note}` where `kind` is `festival`, `fast`, `sankranti`, or with a profile `personal` (dasha changes, Sade Sati, Shani/Guru/Rahu changing sign) and `caution` (Chandrashtama). Each festival is kept on the first day its tithi holds at its traditional time (sunrise, forenoon, midday, afternoon, pradosh, midnight or moonrise); regional traditions can differ by a day.
+
+### `POST /api/muhurat` (passphrase)
+
+Body: `place`, `start`, `days` (1–92, default 60), `activity` (`work`, `travel`, `vehicle`, `home`, `study` or `purchase`), `profile` (optional). Returns the best days (up to 8, by date) with `score`, `tithi`, `nakshatra`, `reasons`, `cautions`, `windows` (`start`, `end`, `label`: Abhijit or a good choghadiya, outside Rahu Kaal, Yamaganda and Gulika) and `rahu_kaal`.
+
+### `POST /api/match` (passphrase)
+
+Body: `bride` and `groom` profiles. Returns `kootas` (`name`, `score`, `max`, `bride`, `groom`, `meaning` for each of the eight), `total` (of `max` 36), `verdict`, `doshas` (Bhakoot and Nadi, with `cancellations`), `approximate` (true without both birth times) and `mangal` (each person's Mangal dosha, or `null` without birth time and place). `422` with an explanation if a birth date is missing, or the Moon changed nakshatra that day and there is no birth time.
 
 ### `POST /api/insights`
 
-Works out signs, birth card and numbers from a profile, plus the card of the day. Nothing is stored. No PIN required.
+Works out a person's signs, numbers, Vedic chart, jataka and timeline, plus the card of the day. Nothing is stored. No passphrase needed.
 
 - **Body:** `profile` (optional, same shape as in `/api/chat`) and `local_date` (optional, `YYYY-MM-DD`, so the card of the day changes at the user's midnight).
 - **Response:** `insights` is `null` without a birth date. Without a profile, everyone gets the same card of the day.
@@ -335,80 +345,56 @@ Works out signs, birth card and numbers from a profile, plus the card of the day
     "conventions": "Lahiri ayanamsa, mean Rahu and Ketu, whole-sign houses, 365.25-day dasha years"
   }
   ```
-  Dosha `status` is `present`, `mild`, `cancelled` or `absent`, sorted in that order.
+  Dosha `status` is `present`, `mild`, `cancelled` or `absent`, sorted in that order. The jataka also carries `lordships` (the houses each graha rules) and `guru` (Guru's transits through the person's life).
+
+  `insights.timeline` (whenever the birth Moon's sign is certain, even without a birth time) holds `sade_sati` (`periods`, `current`, `dhaiya`, `current_dhaiya`) and `guru` (each transit with `rashi`, `from_moon` and `favourable`).
 
   A sign that changed during a birthday with no birth time comes back with `"alternatives": ["Pisces", "Aries"]`. `rising` and `vedic.lagna` need both birth time and place, and `vedic.nakshatra.pada` needs a birth time. Without one, a rashi or nakshatra that changed during the birthday comes back as `{"alternatives": [...]}`.
 
-### `POST /api/chat`
+### `GET /api/sky`
 
-Main conversational endpoint. Runs the GPT-4o function-calling loop and returns the reading.
+The current moon phase, astrological season, Mercury's motion and the panchang for this instant. No passphrase. Query: `local_date` (optional).
 
-- **Headers:** `Content-Type: application/json`, `x-app-pin: <PIN>`
+### `POST /api/chat` (passphrase)
+
+Runs a reading.
+
 - **Body:**
   - `message`: 1–1,000 characters.
-  - `history`: up to 20 messages with role `user` or `assistant`, each up to 8,000 characters. Only the last 6 are sent to the model.
-  - `new_reading`: `true` for a fresh question, which must consult an oracle. `false` (the default) for a follow-up, which is answered from the cards or cowries already cast.
-  - `watched`: optional, `true` if a watcher was in the dark, uncaught, when the question was asked. The reader adds one gentle line.
-  - `oracle`: for a new reading, `"tarot"` (draw a spread the model sizes to the question), `"kaudi"` (cast the cowries), `"jataka"` (read the querent's birth chart; needs a profile with birth time and place, otherwise the reply asks for them and no model call is made) or `"auto"` (the default: the model picks one, with the jataka offered only when there is one).
-  - `local_hour`: optional, `0`–`23`. The user's local hour, used for the witching-hour tone.
-  - `local_date`: optional, `YYYY-MM-DD`, for the personal year.
-  - `profile`: optional. `name` (up to 40 characters), `birth_date`, `birth_time` (`HH:MM`), `timezone` (IANA, e.g. `Asia/Kolkata`), `latitude` and `longitude`. Every field is optional. Birth details are used only to derive traits and are never sent to OpenAI.
-  - `recent_readings`: optional, up to 5 journal summaries, most recent first, each with `date`, `question` (up to 300 characters), `cards` (`card`, `orientation`, `position`), `kaudi` (`position`, `aya`, `remainder`) or `jataka` (the dasha it was read in, e.g. `"Chandra–Budh"`, up to 60 characters), and `tldr` (up to 400 characters).
+  - `history`: up to 20 messages (`user` or `assistant`, each up to 8,000 characters); the last 6 reach the model.
+  - `new_reading`: `true` for a fresh question; `false` (default) for a follow-up about what is already on the table.
+  - `oracle`: `"auto"` (default: the reader reads the jataka, when there is one, together with cards or cowries it chooses), `"tarot"`, `"kaudi"`, or `"jataka"` (the jataka alone; without a birth time and place the reply asks for them and no model call is made).
+  - `profile`: the person the question is about. `asker`: the name of whoever is asking, when it's someone else.
+  - `topic`: optional, one of `career`, `money`, `marriage`, `love`, `health`, `family`, `children`, `studies`, `travel`, `home`, `spiritual`.
+  - `language`: `en` (default), `hi`, `kn`, `ta`, `te`, `ml`, `mr`, `gu` or `bn`.
+  - `local_date`: optional, `YYYY-MM-DD`.
+  - `recent_readings`: up to 5 journal summaries, most recent first, each with `date`, `question` (up to 300 characters), `cards`, `kaudi` and/or `jataka` (the dasha it was read in, up to 60 characters), and `tldr` (up to 400 characters).
+- **Response:**
   ```json
   {
-    "message": "Should I take the new job offer?",
-    "history": [],
-    "new_reading": true,
-    "local_hour": 21,
-    "local_date": "2026-10-15",
-    "profile": {"name": "Ajay", "birth_date": "1990-07-15"},
-    "recent_readings": []
+    "reply": "…",
+    "tldr": "…",
+    "spread": "past_present_future",
+    "cards": [{"position": "Past Influences", "card": "The Magician", "orientation": "upright", "meaning": "…", "image": "/static/cards/the-magician.webp", "personal": "Your birth card"}],
+    "kaudi": null,
+    "jataka": {"mahadasha": "Chandra", "antardasha": "Chandra", "pratyantardasha": "Budh"}
   }
   ```
-- **Response:** `spread` is the spread that was drawn, or `null` if none was. `cards` is empty when nothing was drawn, and `tldr` is `null` if the model didn't include one. A card that is personally significant to the querent has a `personal` field, e.g. `"Your birth card"`.
-  ```json
-  {
-    "reply": "Narrative interpretation...",
-    "spread": "situation_obstacle_advice",
-    "cards": [
-      {
-        "position": "Core Situation",
-        "card": "The Magician",
-        "orientation": "upright",
-        "meaning": "Manifestation, resourcefulness, power, inspired action.",
-        "image": "/static/cards/the-magician.webp"
-      }
-    ],
-    "tldr": "Core takeaway summary..."
-  }
-  ```
-- **Errors:** `401` invalid PIN, `422` invalid body (empty or too-long message, unknown role, invalid `local_hour`, profile or journal fields out of range), `429` rate limit exceeded (5 requests/minute per IP), `500` missing API key or a failed reading (details are logged on the server, not returned), `503` when OpenAI rejects the API key (expired or revoked), the account is out of credit, or OpenAI is rate limiting; the `detail` says which, in plain words.
-
-  When the jataka was read, `jataka` names the dasha lords running now, e.g. `{"mahadasha": "Chandra", "antardasha": "Chandra", "pratyantardasha": "Budh"}` (otherwise it is `null`); the browser draws the chart from `/api/insights`.
-
-  For a kaudi reading, `cards` is empty, `spread` is `null`, and `kaudi` holds the casting (otherwise `kaudi` is `null`):
-  ```json
-  "kaudi": {
-    "heaps": [
-      {"position": "What has been", "count": 17, "remainder": 1, "aya": "Dhwaja", "devanagari": "ध्वज", "symbol": "the flag", "meaning": "victory, honour and a cause raised high", "favourable": true}
-    ],
-    "leaning": "The shells lean kindly, with one heap asking for care."
-  }
-  ```
+  `cards` is empty and `spread` `null` when no cards were drawn; `kaudi` holds the casting (`heaps` with `position`, `count`, `remainder`, `aya`, `devanagari`, `symbol`, `meaning`, `favourable`, and a `leaning`) when the cowries were cast; `jataka` names the dasha lords when a new reading read the jataka (the browser draws the chart from `/api/insights`).
+- **Errors:** `401` wrong passphrase, `422` invalid body, `429` more than 5 readings a minute, `500` no API key or a failed reading (details only in the server log), `503` OpenAI rejected the key (expired or revoked), the account is out of credit, or OpenAI is rate limiting, with a plain `detail`.
 
 ---
 
 ## 🎨 Credits
 
-Card artwork is the original 1909 Rider-Waite-Smith deck illustrated by **Pamela Colman Smith**, which is in the public domain. The scans come from [Wikimedia Commons](https://commons.wikimedia.org/wiki/Category:Rider-Waite-Smith_tarot_deck_(TaionWC)) and were resized and converted to WebP for this app.
+Card artwork is the original 1909 Rider-Waite-Smith deck illustrated by **Pamela Colman Smith**, in the public domain; the scans come from [Wikimedia Commons](https://commons.wikimedia.org/wiki/Category:Rider-Waite-Smith_tarot_deck_(TaionWC)), resized and converted to WebP.
 
-The sound recordings are from Freesound, all released under [CC0](https://creativecommons.org/publicdomain/zero/1.0/), and cut and levelled for this app by `scripts/build_audio.py` (`uv run python scripts/build_audio.py`, needs ffmpeg):
+The sounds are from Freesound, all [CC0](https://creativecommons.org/publicdomain/zero/1.0/), cut and levelled by `scripts/build_audio.py` (`uv run python scripts/build_audio.py`, needs ffmpeg):
 
 - Tanpura: ["Tanpura in E"](https://freesound.org/s/148850/) by iluppai
 - Temple bell: ["Ghanta-Leather-Mallet-2015-05-16"](https://freesound.org/s/274316/) by the_very_Real_Horst
 - Breaths: ["breath"](https://freesound.org/s/619900/) by zagor76 and ["Spooky Breath"](https://freesound.org/s/341751/) by pqr
-- Ghungroo: ["FX Indian Ghungroo Anklet"](https://freesound.org/s/700521/) by bashrambali
 
-Planetary positions use NASA JPL's [DE440s](https://ssd.jpl.nasa.gov/planets/eph_export.html) ephemeris through [Skyfield](https://rhodesmill.org/skyfield/). Vedic positions subtract the Lahiri (Chitrapaksha) ayanamsa. Birth-place search uses the [Open-Meteo Geocoding API](https://open-meteo.com/en/docs/geocoding-api).
+Planetary positions use NASA JPL's [DE440s](https://ssd.jpl.nasa.gov/planets/eph_export.html) ephemeris through [Skyfield](https://rhodesmill.org/skyfield/). Vedic positions subtract the Lahiri (Chitrapaksha) ayanamsa; Rahu and Ketu are the mean lunar nodes. Place search uses the [Open-Meteo Geocoding API](https://open-meteo.com/en/docs/geocoding-api).
 
-Readings are generated by AI and are for entertainment and reflection only.
+Readings are generated by AI and are for reflection, not a substitute for your jyotishi, doctor, lawyer or financial adviser.

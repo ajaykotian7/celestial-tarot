@@ -16,11 +16,15 @@ from fastapi.staticfiles import StaticFiles
 from openai import AsyncOpenAI, AuthenticationError, PermissionDeniedError, RateLimitError
 from pydantic import BaseModel, Field
 
-from astrology import current_sky
-from celestial import is_witching_hour, moon_phase
-from jyotish import panchang
+from astrology import birth_moment, current_sky
+from celestial import moon_phase
+from festivals import calendar as festival_calendar
+from festivals import upcoming
+from jyotish import NAKSHATRAS, RASHIS, panchang
 from kaudi import cast_kaudi, kaudi_tool
-from kundali import current_line, jataka_summary, jataka_tool, sign_ingresses
+from kundali import current_line, graha_longitude, jataka_summary, sign_ingresses
+from matching import ashtakoota, moon_for_matching
+from muhurta import ACTIVITIES, day_periods, guidance, muhurat, natal_moon, personal_day, sun_times
 from personal import daily_card, derive_insights
 from tarot_engine import (
     TAROT_DECK,
@@ -35,6 +39,7 @@ from tarot_engine import (
 load_dotenv()
 
 logger = logging.getLogger("uvicorn.error")
+
 
 def build_transit_tables() -> None:
     for graha in ("saturn", "jupiter", "rahu"):
@@ -90,17 +95,19 @@ MAX_HISTORY_CONTENT_CHARS = 8000
 MAX_HISTORY_MESSAGES = 20
 HISTORY_MESSAGES_SENT_TO_MODEL = 6
 MAX_RECENT_READINGS = 5
+MAX_LIFE_EVENTS = 40
+MAX_CALENDAR_DAYS = 92
 
 MODEL = "gpt-4o"
 MAX_COMPLETION_TOKENS = 700
-# A 10-card Celtic Cross needs more room to cover every position
-CELTIC_CROSS_COMPLETION_TOKENS = 1200
+# A 10-card Celtic Cross, and readings in Indian scripts, need more room
+LONG_COMPLETION_TOKENS = 1200
 
 SYSTEM_PROMPT = (
-    "You are an intuitive, grounded Tarot AI reader with a gentle, reassuring voice. "
-    "Soften difficult cards and emphasise hope and the querent's own agency, without "
-    "hiding what the cards say.\n"
-    "When answering a query or drawing cards:\n"
+    "You are an intuitive, grounded reader of the tarot, kaudi (cowrie) prashna and "
+    "Jyotish, with a gentle, reassuring voice. Soften difficult signs and emphasise hope "
+    "and the querent's own agency, without hiding what you see.\n"
+    "When answering:\n"
     "1. Detail what was drawn or read (each card, heap or graha) and how they interact. "
     "Mention only cards, cowries or grahas that were actually drawn, cast or read in "
     "this conversation; never invent any.\n"
@@ -109,7 +116,9 @@ SYSTEM_PROMPT = (
     "a Celtic Cross. Keep follow-up answers brief.\n"
     "3. ALWAYS conclude your reading by providing a unified takeaway in 2-3 sentences. "
     "Wrap ONLY this summary inside <tldr>...</tldr> tags.\n"
-    "4. End with an open-ended reflective question."
+    "4. End with an open-ended reflective question.\n"
+    "5. You are not a doctor, lawyer or financial adviser: for health, legal or money "
+    "decisions, encourage the right professional alongside the reading."
 )
 
 EMPTY_REPLY_FALLBACK = "The cards are quiet right now. Please ask your question again."
@@ -136,22 +145,27 @@ KAUDI_READING = (
     "for each heap."
 )
 
-JATAKA_READING = (
-    "This reading is from their jataka alone: no tarot cards or cowries are drawn, so "
-    "never mention or invent any. Answer from the mahadasha, antardasha and pratyantardasha "
-    "running now and the houses their lords rule and occupy, the transits from the Moon "
-    "and lagna (Sade Sati, Guru, Rahu and Ketu), the natal houses that bear on the "
-    "question and their lords (for work and money: the 10th, the 11th of gains, the 2nd "
-    "of wealth and the 6th of service; for marriage: the 7th, its lord and Shukra), and "
-    "any doshas or yogas that matter to it. Name the houses and grahas you are reading "
-    "from, in plain words. When they ask when, name the specific coming periods and "
-    "transits in the jataka that best support it and say why, as tendencies, never "
-    "certainties. Never predict death, "
-    "serious illness, accidents or the end of a marriage, and never frighten: when a dosha "
-    "or a hard period comes up, say what it traditionally means, any cancellations, and "
-    "when it eases. Never recommend gemstones or paid pujas; if a remedy fits, offer a "
-    "simple one (a prayer or mantra, a lamp, a fast, charity). The querent's family "
-    "jyotishi knows them best; never contradict them."
+# How to read a jataka, whenever one is part of the reading
+JATAKA_GUIDE = (
+    "Reading the jataka: answer from the mahadasha, antardasha and pratyantardasha running "
+    "now and the houses their lords rule and occupy, the transits from the Moon and lagna "
+    "(Sade Sati, Guru, Rahu and Ketu), the natal houses that bear on the question and their "
+    "lords (for work and money: the 10th, the 11th of gains, the 2nd of wealth and the 6th "
+    "of service; for marriage: the 7th, its lord and Shukra; for children: the 5th and "
+    "Guru; for home and property: the 4th), and any doshas or yogas that matter to it. Name "
+    "the houses and grahas you are reading from, in plain words. When they ask when, name "
+    "the specific coming periods and transits in the jataka that best support it and say "
+    "why, as tendencies, never certainties. Never predict death, serious illness, "
+    "accidents or the end of a marriage, and never frighten: when a dosha or a hard period "
+    "comes up, say what it traditionally means, any cancellations, and when it eases. Never "
+    "recommend gemstones or paid pujas; if a remedy fits, offer a simple one (a prayer or "
+    "mantra, a lamp, a fast, charity). The family jyotishi knows them best; never "
+    "contradict them."
+)
+
+JATAKA_ONLY = (
+    "This is a new question, read from their jataka alone: no tarot cards or cowries are "
+    "drawn, so never mention or invent any."
 )
 
 # What to do with a new question, by the oracle the querent chose
@@ -160,8 +174,7 @@ NEW_READING_PROMPTS = {
     + SPREAD_SIZING,
     "kaudi": "This is a new question, so cast the cowries with cast_kaudi before answering. "
     + KAUDI_READING,
-    "jataka": "This is a new question, so read the querent's jataka with consult_jataka "
-    "before answering. " + JATAKA_READING,
+    "jataka": JATAKA_ONLY,
     "auto": (
         "This is a new question. Consult one oracle before answering. Cast the cowries "
         "(cast_kaudi) for a direct question about whether something will happen or how a "
@@ -173,17 +186,18 @@ NEW_READING_PROMPTS = {
     ),
 }
 
-# Added to "auto" when the querent has a jataka to read
-AUTO_JATAKA = (
-    "The querent's jataka can be read too (consult_jataka): choose it for questions about "
-    "timing, life periods, the past and future, career or marriage prospects, Sade Sati or "
-    "doshas. "
-    + JATAKA_READING
+# Added to "auto" when the querent has a jataka: one consultation, two voices
+COMBINED_READING = (
+    "Their jataka is below, so read it together with the cards or cowries: the jataka says "
+    "when and why (the dashas and transits), the cards or cowries say how to meet it. Open "
+    "with what the jataka shows, giving it at least as much room as what was drawn, then "
+    "bring them together. When the question asks when, the timing must come from the "
+    "jataka: name the coming antardashas or transits that support it, with their dates."
 )
 
 NO_JATAKA_REPLY = (
-    "Your jataka needs your birth time and birth place. Add them under ☉ You, and the "
-    "grahas will answer."
+    "A jataka needs a birth time and birth place. Add them in Family, and the grahas will "
+    "answer."
 )
 
 FOLLOW_UP_PROMPT = (
@@ -192,24 +206,43 @@ FOLLOW_UP_PROMPT = (
     "for a new reading."
 )
 
-# In the app's story, watchers in the dark try to cloud readings; the querent drives
-# them off with the lamp. If one was still watching when they asked:
-WATCHED_PROMPT = (
-    "Something unseen was watching from the dark as the querent asked this question. "
-    "Near the end, in one gentle sentence, invite them to trust what rings true in this "
-    "reading and let the rest fall away. Keep it calm and kind; never frighten them."
-)
+TOPICS = {
+    "career": "career and work",
+    "money": "money and finances",
+    "marriage": "marriage",
+    "love": "love and relationships",
+    "health": "health and well-being",
+    "family": "family",
+    "children": "children",
+    "studies": "studies and exams",
+    "travel": "travel and living abroad",
+    "home": "home and property",
+    "spiritual": "spiritual life",
+}
 
-WITCHING_HOUR_PROMPT = (
-    "It is the witching hour where the querent is (after midnight). Let the atmosphere "
-    "grow darker, more ominous and uncanny, while your voice stays gentle and kind: "
-    "never frighten them about real-world harm."
-)
+LANGUAGES = {
+    "en": "English",
+    "hi": "Hindi",
+    "kn": "Kannada",
+    "ta": "Tamil",
+    "te": "Telugu",
+    "ml": "Malayalam",
+    "mr": "Marathi",
+    "gu": "Gujarati",
+    "bn": "Bengali",
+}
 
 
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant"]
     content: str = Field(max_length=MAX_HISTORY_CONTENT_CHARS)
+
+
+class LifeEvent(BaseModel):
+    """Something that happened (or is planned) in a person's life, e.g. 2015 married."""
+
+    when: str = Field(pattern=r"^\d{4}(-\d{2})?$")
+    label: str = Field(min_length=1, max_length=80)
 
 
 class Profile(BaseModel):
@@ -218,12 +251,23 @@ class Profile(BaseModel):
     OpenAI. Only the derived traits (and the name) reach the model."""
 
     name: Optional[str] = Field(default=None, max_length=40)
+    # Who this is to the person using the app: "self", "mother", "son", ...
+    relation: Optional[str] = Field(default=None, max_length=24)
     birth_date: Optional[dt.date] = None
     birth_time: Optional[dt.time] = None
     # IANA time zone of the birth place, e.g. "Asia/Kolkata"
     timezone: Optional[str] = Field(default=None, max_length=64)
     latitude: Optional[float] = Field(default=None, ge=-90, le=90)
     longitude: Optional[float] = Field(default=None, ge=-180, le=180)
+    events: List[LifeEvent] = Field(default=[], max_length=MAX_LIFE_EVENTS)
+
+
+class Place(BaseModel):
+    """Where the user is now, for sunrise, Rahu Kaal and the calendar."""
+
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    timezone: str = Field(max_length=64)
 
 
 class JournalCard(BaseModel):
@@ -240,7 +284,7 @@ class JournalHeap(BaseModel):
 
 class JournalEntry(BaseModel):
     """A summary of a past reading from the querent's on-device journal: tarot cards,
-    the three heaps of a kaudi casting, or the dasha a jataka reading was made in."""
+    the three heaps of a kaudi casting, and/or the dasha a jataka was read in."""
 
     date: dt.date
     question: str = Field(max_length=300)
@@ -263,17 +307,44 @@ class ChatRequest(BaseModel):
     # True for a fresh question: cards must be drawn (or cowries cast). False for
     # follow-ups about what is already on the table.
     new_reading: bool = False
-    # For a new reading: the tarot, the cowries, the querent's jataka, or let the
-    # oracle choose
+    # For a new reading: the tarot, the cowries, the jataka alone, or let the reader
+    # decide (which reads the jataka together with the cards or cowries)
     oracle: Literal["auto", "tarot", "kaudi", "jataka"] = "auto"
-    # A watcher was in the dark, uncaught, when the question was asked
-    watched: bool = False
-    # The querent's local hour, used for the witching-hour tone
-    local_hour: Optional[int] = Field(default=None, ge=0, le=23)
     local_date: Optional[dt.date] = None
+    # The person the question is about
     profile: Optional[Profile] = None
+    # The name of the person asking, when they ask about someone else
+    asker: Optional[str] = Field(default=None, max_length=40)
+    topic: Optional[Literal[tuple(TOPICS)]] = None  # type: ignore[valid-type]
+    language: Literal[tuple(LANGUAGES)] = "en"  # type: ignore[valid-type]
     # Most recent first
     recent_readings: List[JournalEntry] = Field(default=[], max_length=MAX_RECENT_READINGS)
+
+
+class DayRequest(BaseModel):
+    place: Place
+    local_date: dt.date
+    profile: Optional[Profile] = None
+
+
+class CalendarRequest(BaseModel):
+    place: Place
+    start: dt.date
+    days: int = Field(default=31, ge=1, le=MAX_CALENDAR_DAYS)
+    profile: Optional[Profile] = None
+
+
+class MuhuratRequest(BaseModel):
+    place: Place
+    start: dt.date
+    days: int = Field(default=60, ge=1, le=MAX_CALENDAR_DAYS)
+    activity: Literal[tuple(ACTIVITIES)]  # type: ignore[valid-type]
+    profile: Optional[Profile] = None
+
+
+class MatchRequest(BaseModel):
+    bride: Profile
+    groom: Profile
 
 
 def get_client_ip(request: Request) -> str:
@@ -318,12 +389,15 @@ def pin_matches(candidate: Optional[str]) -> bool:
     )
 
 
-def run_tool(
-    name: str, raw_args: Optional[str], functions: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def require_pin(x_app_pin: Optional[str]) -> None:
+    if APP_ACCESS_PIN and not pin_matches(x_app_pin):
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid access PIN.")
+
+
+def run_tool(name: str, raw_args: Optional[str]) -> Dict[str, Any]:
     """Run a model-requested tool. Always returns a result, so every tool call
     gets a response message (OpenAI rejects the follow-up request otherwise)."""
-    fn = (functions or AVAILABLE_FUNCTIONS).get(name)
+    fn = AVAILABLE_FUNCTIONS.get(name)
     if fn is None:
         return {"status": "error", "message": f"Unknown tool: {name}"}
     try:
@@ -449,6 +523,20 @@ def panchang_prompt(today: Dict[str, Any]) -> str:
     return text + " Mention the panchang only where it genuinely illuminates the reading."
 
 
+def subject_prompt(payload: ChatRequest) -> Optional[str]:
+    """Who is asking about whom, when the question is about someone else."""
+    profile = payload.profile
+    asker = " ".join((payload.asker or "").split())
+    if not profile or not asker or (profile.relation or "self") == "self":
+        return None
+    name = " ".join((profile.name or "").split()) or "them"
+    relation = " ".join((profile.relation or "").split())
+    return (
+        f"{asker} is asking about their {relation}, {name}. Speak to {asker}, about {name}: "
+        f"everything below about the querent describes {name}."
+    )
+
+
 def profile_prompt(
     profile: Optional[Profile], insights: Optional[Dict[str, Any]]
 ) -> Optional[str]:
@@ -476,10 +564,7 @@ def profile_prompt(
         if vedic:
             lines.append(vedic)
         if insights.get("jataka"):
-            lines.append(
-                f"Their jataka: {current_line(insights['jataka'])}. "
-                "consult_jataka gives the full chart when a question needs it."
-            )
+            lines.append(f"Their jataka: {current_line(insights['jataka'])}.")
         lines.append(describe_numerology(insights["numerology"]))
         personal = ", ".join(
             f"{card_display_name(key)} ({reason})"
@@ -490,7 +575,15 @@ def profile_prompt(
             "(it is marked 'personal'), point it out as especially meaningful."
         )
         lines.append(
-            "Weave these in lightly where they illuminate the cards; don't recite them."
+            "Weave these in lightly where they illuminate the reading; don't recite them."
+        )
+    if profile.events:
+        events = "; ".join(
+            f"{e.when}: {' '.join(e.label.split())}" for e in sorted(profile.events, key=lambda e: e.when)
+        )
+        lines.append(
+            f"Events in their life they have shared: {events}. Where the jataka's periods "
+            "line up with these, say so; don't recite them."
         )
     if not lines:
         return None
@@ -503,19 +596,24 @@ def journal_prompt(entries: List[JournalEntry]) -> Optional[str]:
     lines = []
     counts: Counter = Counter()
     for entry in entries:
+        parts = []
         if entry.jataka:
-            drew = f"read their jataka ({entry.jataka} dasha)"
-        elif entry.kaudi:
-            drew = "cast the cowries: " + ", ".join(
-                f"{h.position.lower()} {h.aya} ({h.remainder})" for h in entry.kaudi
+            parts.append(f"read their jataka ({entry.jataka} dasha)")
+        if entry.kaudi:
+            parts.append(
+                "cast the cowries: "
+                + ", ".join(f"{h.position.lower()} {h.aya} ({h.remainder})" for h in entry.kaudi)
             )
-        else:
-            drew = "drew " + ", ".join(
-                c.card + (" (reversed)" if c.orientation == "reversed" else "")
-                for c in entry.cards
+        if entry.cards:
+            parts.append(
+                "drew "
+                + ", ".join(
+                    c.card + (" (reversed)" if c.orientation == "reversed" else "")
+                    for c in entry.cards
+                )
             )
         counts.update(c.card for c in entry.cards)
-        line = f'- {entry.date.isoformat()}: "{entry.question}" {drew}.'
+        line = f'- {entry.date.isoformat()}: "{entry.question}" {"; ".join(parts) or "asked"}.'
         if entry.tldr:
             line += f" Takeaway: {entry.tldr}"
         lines.append(line)
@@ -533,9 +631,23 @@ def has_jataka(insights: Optional[Dict[str, Any]]) -> bool:
     return bool(insights and insights.get("jataka"))
 
 
+def reads_jataka(payload: ChatRequest, insights: Optional[Dict[str, Any]]) -> bool:
+    """Whether the full jataka is part of this reading: always for the jataka oracle and
+    "let the reader decide", and for follow-ups (they may ask about timing)."""
+    if not has_jataka(insights):
+        return False
+    return not payload.new_reading or payload.oracle in ("auto", "jataka")
+
+
+def jataka_prompt(payload: ChatRequest, insights: Dict[str, Any], today: dt.date) -> str:
+    summary = jataka_summary(insights["jataka"], payload.profile.birth_date, today)
+    return f"Their jataka (a summary in words):\n{summary}\n\n{JATAKA_GUIDE}"
+
+
 def build_system_prompt(
-    payload: ChatRequest, insights: Optional[Dict[str, Any]] = None
+    payload: ChatRequest, insights: Optional[Dict[str, Any]] = None, today: Optional[dt.date] = None
 ) -> str:
+    today = today or payload.local_date or dt.datetime.now(dt.timezone.utc).date()
     moon = moon_phase()
     sky_now = current_sky()
     sky_text = (
@@ -549,18 +661,25 @@ def build_system_prompt(
         panchang_prompt(panchang(local_date=payload.local_date)),
     ]
     parts.append(NEW_READING_PROMPTS[payload.oracle] if payload.new_reading else FOLLOW_UP_PROMPT)
-    if payload.new_reading and payload.oracle == "auto" and has_jataka(insights):
-        parts.append(AUTO_JATAKA)
-    if is_witching_hour(payload.local_hour):
-        parts.append(WITCHING_HOUR_PROMPT)
-    if payload.watched and payload.new_reading:
-        parts.append(WATCHED_PROMPT)
+    with_jataka = reads_jataka(payload, insights)
+    if payload.new_reading and payload.oracle == "auto" and with_jataka:
+        parts.append(COMBINED_READING)
+    if payload.topic:
+        parts.append(f"The question is about {TOPICS[payload.topic]}.")
     for extra in (
+        subject_prompt(payload),
         profile_prompt(payload.profile, insights),
+        jataka_prompt(payload, insights, today) if with_jataka else None,
         journal_prompt(payload.recent_readings),
     ):
         if extra:
             parts.append(extra)
+    if payload.language != "en":
+        parts.append(
+            f"Write the whole reply, including the takeaway, in {LANGUAGES[payload.language]}, "
+            "in its own script, simply enough for an elder to follow. Keep the <tldr> tags "
+            "exactly as they are."
+        )
     return "\n\n".join(parts)
 
 
@@ -594,37 +713,26 @@ def public_insights(insights: Optional[Dict[str, Any]]) -> Optional[Dict[str, An
     }
 
 
-ORACLE_TOOLS = {"tarot": "draw_spread", "kaudi": "cast_kaudi", "jataka": "consult_jataka"}
+ORACLE_TOOLS = {"tarot": "draw_spread", "kaudi": "cast_kaudi"}
 
 
-def tool_settings(payload: ChatRequest, with_jataka: bool = False) -> Dict[str, Any]:
-    """Tools for the first completion. A new question must consult exactly one oracle:
-    the one the querent chose, or (auto) whichever the model judges fits. Follow-ups
-    may use any tool, or none. The jataka is offered only to a querent who has one."""
-    tools = [*ALL_TOOLS, jataka_tool] if with_jataka else ALL_TOOLS
+def tool_settings(payload: ChatRequest) -> Dict[str, Any]:
+    """Tools for the first completion. A new question consults the oracle the querent
+    chose, or (auto) cards or cowries as the model judges; the jataka needs no tool, as
+    it is already in the prompt. Follow-ups may use any tool, or none."""
     if not payload.new_reading:
-        return {"tools": tools, "tool_choice": "auto"}
+        return {"tools": ALL_TOOLS, "tool_choice": "auto"}
+    if payload.oracle == "jataka":
+        return {}
     if payload.oracle == "auto":
         return {
-            "tools": [DRAW_SPREAD_TOOL, kaudi_tool, *([jataka_tool] if with_jataka else [])],
+            "tools": [DRAW_SPREAD_TOOL, kaudi_tool],
             "tool_choice": "required",
             "parallel_tool_calls": False,
         }
     return {
-        "tools": tools,
+        "tools": ALL_TOOLS,
         "tool_choice": {"type": "function", "function": {"name": ORACLE_TOOLS[payload.oracle]}},
-    }
-
-
-def jataka_tool_result(
-    insights: Optional[Dict[str, Any]], profile: Optional[Profile], today: dt.date
-) -> Dict[str, Any]:
-    """What consult_jataka gives the model: a summary in words, never the chart itself."""
-    if not has_jataka(insights) or profile is None or profile.birth_date is None:
-        return {"status": "error", "message": "The querent has no jataka to read."}
-    return {
-        "status": "success",
-        "jataka": jataka_summary(insights["jataka"], profile.birth_date, today),
     }
 
 
@@ -635,9 +743,26 @@ def dasha_now(insights: Dict[str, Any]) -> Optional[Dict[str, str]]:
     return {level: period["lord"] for level, period in current.items()}
 
 
+def completion_tokens(payload: ChatRequest, spread: Optional[str], with_jataka: bool) -> int:
+    if spread == "celtic_cross" or payload.language != "en" or (with_jataka and payload.new_reading):
+        return LONG_COMPLETION_TOKENS
+    return MAX_COMPLETION_TOKENS
+
+
 @app.get("/")
 def serve_index():
     return FileResponse("static/index.html")
+
+
+@app.get("/sw.js")
+def service_worker():
+    # Served from the root so it can look after the whole app
+    return FileResponse("static/sw.js", media_type="text/javascript")
+
+
+@app.get("/manifest.webmanifest")
+def manifest():
+    return FileResponse("static/manifest.webmanifest", media_type="application/manifest+json")
 
 
 @app.post("/api/verify-pin")
@@ -685,6 +810,126 @@ def insights(payload: InsightsRequest):
     }
 
 
+def _person(profile: Optional[Profile], today: dt.date):
+    """(insights, natal Moon) for a profile, either of which may be None."""
+    derived = insights_for(profile, today)
+    return derived, natal_moon((derived or {}).get("vedic"))
+
+
+@app.post("/api/day")
+def day(payload: DayRequest, x_app_pin: Optional[str] = Header(None)):
+    """Today for a place: sunrise, the panchang at sunrise, Rahu Kaal and the other
+    periods, choghadiyas, what falls today and in the coming week, and (with a profile)
+    how the day sits with the person's birth Moon."""
+    require_pin(x_app_pin)
+    place, today = payload.place, payload.local_date
+    derived, natal = _person(payload.profile, today)
+    times = sun_times(place.latitude, place.longitude, place.timezone, today, 1)[0]
+    periods = day_periods(times["sunrise"], times["sunset"], times["next_sunrise"], today)
+    at_sunrise = panchang(now=times["sunrise"].astimezone(dt.timezone.utc), local_date=today)
+    days = festival_calendar(
+        place.latitude, place.longitude, place.timezone, today, 8,
+        natal, (derived or {}).get("jataka"),
+    )
+    mine = None
+    if natal:
+        # The Moon at sunrise, as the rest of the day's panchang
+        moon_sign = [r[0] for r in RASHIS].index(at_sunrise["moon_rashi"])
+        nakshatra = [n[0] for n in NAKSHATRAS].index(at_sunrise["nakshatra"]["name"])
+        mine = personal_day(natal, moon_sign, nakshatra)
+        mine["guidance"] = guidance(mine)
+    jataka = (derived or {}).get("jataka")
+    timeline = (derived or {}).get("timeline")
+    return {
+        "date": today,
+        "sunrise": times["sunrise"],
+        "sunset": times["sunset"],
+        "next_sunrise": times["next_sunrise"],
+        "approximate": times["approximate"],
+        "panchang": at_sunrise,
+        "month": days[0]["month"],
+        "periods": periods,
+        "today": days[0]["items"],
+        "coming": upcoming(days[1:]),
+        "moon": moon_phase(),
+        "personal": mine,
+        "dasha": jataka and dasha_now(derived),
+        "sade_sati": timeline and timeline["sade_sati"]["current"],
+        "daily_card": daily_card(today, payload.profile.birth_date if derived else None),
+    }
+
+
+@app.post("/api/calendar")
+def calendar_endpoint(payload: CalendarRequest, x_app_pin: Optional[str] = Header(None)):
+    """Festivals, fasts and sankrantis for each day, plus (with a profile) Chandrashtama
+    days, dasha changes, Sade Sati and the slow grahas changing sign."""
+    require_pin(x_app_pin)
+    place = payload.place
+    derived, natal = _person(payload.profile, payload.start)
+    return {
+        "days": festival_calendar(
+            place.latitude, place.longitude, place.timezone, payload.start, payload.days,
+            natal, (derived or {}).get("jataka"),
+        )
+    }
+
+
+@app.post("/api/muhurat")
+def muhurat_endpoint(payload: MuhuratRequest, x_app_pin: Optional[str] = Header(None)):
+    """The best coming days (and hours) for an activity, for a place and optionally a
+    person, with the reasons."""
+    require_pin(x_app_pin)
+    place = payload.place
+    _, natal = _person(payload.profile, payload.start)
+    return muhurat(
+        place.latitude, place.longitude, place.timezone, payload.start, payload.days,
+        payload.activity, natal,
+    )
+
+
+def _match_moon(profile: Profile, today: dt.date) -> Optional[Dict[str, Any]]:
+    derived = insights_for(profile, today)
+    if not derived:
+        return None
+    midday = None
+    if not derived.get("jataka"):
+        _, start, end = birth_moment(profile.birth_date, profile.birth_time, profile.timezone)
+        midday = graha_longitude("moon", start + (end - start) / 2)
+    moon = moon_for_matching(derived.get("vedic"), derived.get("jataka"), midday)
+    if moon is None:
+        return None
+    mangal = next((d for d in (derived.get("jataka") or {}).get("doshas", []) if d["key"] == "mangal"), None)
+    return {**moon, "mangal": mangal}
+
+
+@app.post("/api/match")
+def match_endpoint(payload: MatchRequest, x_app_pin: Optional[str] = Header(None)):
+    """Ashtakoota guna milan for a bride and groom, with Mangal dosha for each when
+    their birth times are known."""
+    require_pin(x_app_pin)
+    today = dt.datetime.now(dt.timezone.utc).date()
+    bride, groom = _match_moon(payload.bride, today), _match_moon(payload.groom, today)
+    missing = [
+        p.name or role
+        for p, role, moon in ((payload.bride, "the bride", bride), (payload.groom, "the groom", groom))
+        if moon is None
+    ]
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Matching needs a birth date for {' and '.join(missing)}, and a birth time "
+                "if the Moon changed nakshatra that day."
+            ),
+        )
+    result = ashtakoota(bride, groom)
+    return {
+        **result,
+        "approximate": bride["approximate"] or groom["approximate"],
+        "mangal": {"bride": bride["mangal"], "groom": groom["mangal"]},
+    }
+
+
 @app.post("/api/chat")
 async def chat_endpoint(
     payload: ChatRequest, request: Request, x_app_pin: Optional[str] = Header(None)
@@ -696,8 +941,7 @@ async def chat_endpoint(
         )
 
     # 1. Enforce PIN check
-    if APP_ACCESS_PIN and not pin_matches(x_app_pin):
-        raise HTTPException(status_code=401, detail="Unauthorized: Invalid access PIN.")
+    require_pin(x_app_pin)
 
     # 2. Rate limiting check
     if is_rate_limited(
@@ -712,7 +956,7 @@ async def chat_endpoint(
     try:
         today = payload.local_date or dt.datetime.now(dt.timezone.utc).date()
         querent = insights_for(payload.profile, today)
-        with_jataka = has_jataka(querent)
+        with_jataka = reads_jataka(payload, querent)
         if payload.new_reading and payload.oracle == "jataka" and not with_jataka:
             # Nothing to read, so don't spend a completion on it
             return {
@@ -723,7 +967,7 @@ async def chat_endpoint(
                 "jataka": None,
                 "tldr": None,
             }
-        system_prompt = build_system_prompt(payload, querent)
+        system_prompt = build_system_prompt(payload, querent, today)
         messages: List[Any] = [{"role": "system", "content": system_prompt}]
 
         for h in payload.history[-HISTORY_MESSAGES_SENT_TO_MODEL:]:
@@ -734,25 +978,20 @@ async def chat_endpoint(
         response = await client.chat.completions.create(
             model=MODEL,
             messages=messages,
-            **tool_settings(payload, with_jataka),
-            max_tokens=MAX_COMPLETION_TOKENS,
+            **tool_settings(payload),
+            max_tokens=completion_tokens(payload, None, with_jataka),
         )
 
         resp_msg = response.choices[0].message
         drawn_cards_data = []
         drawn_spread = None
         cast = None
-        read_jataka = None
-        functions = {
-            **AVAILABLE_FUNCTIONS,
-            "consult_jataka": lambda: jataka_tool_result(querent, payload.profile, today),
-        }
 
         if resp_msg.tool_calls:
             messages.append(resp_msg)
             for tool_call in resp_msg.tool_calls:
                 fn_name = tool_call.function.name
-                tool_res = run_tool(fn_name, tool_call.function.arguments, functions)
+                tool_res = run_tool(fn_name, tool_call.function.arguments)
                 if fn_name == "draw_spread" and "cards" in tool_res:
                     # Marked before the model sees the result, so it can call them out
                     mark_personal_cards(tool_res["cards"], querent)
@@ -760,8 +999,6 @@ async def chat_endpoint(
                     drawn_spread = tool_res["spread_type"]
                 elif fn_name == "cast_kaudi" and "heaps" in tool_res:
                     cast = tool_res
-                elif fn_name == "consult_jataka" and tool_res["status"] == "success":
-                    read_jataka = dasha_now(querent)
 
                 messages.append(
                     {
@@ -774,11 +1011,7 @@ async def chat_endpoint(
             final_resp = await client.chat.completions.create(
                 model=MODEL,
                 messages=messages,
-                max_tokens=(
-                    CELTIC_CROSS_COMPLETION_TOKENS
-                    if drawn_spread == "celtic_cross"
-                    else MAX_COMPLETION_TOKENS
-                ),
+                max_tokens=completion_tokens(payload, drawn_spread, with_jataka),
             )
             raw_reply = final_resp.choices[0].message.content
         else:
@@ -791,8 +1024,8 @@ async def chat_endpoint(
             "cards": drawn_cards_data,
             "spread": drawn_spread,
             "kaudi": cast and {"heaps": cast["heaps"], "leaning": cast["leaning"]},
-            # The dasha lords the jataka was read in; the browser draws the chart itself
-            "jataka": read_jataka,
+            # The dasha lords a new reading was read in; the browser draws the chart itself
+            "jataka": dasha_now(querent) if with_jataka and payload.new_reading else None,
             "tldr": tldr_summary,
         }
 

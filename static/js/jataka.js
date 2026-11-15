@@ -1,10 +1,8 @@
-// The jataka: the querent's Vedic birth chart, drawn in the South Indian style, with
-// their dashas, Shani's transits around the Moon, gochar, doshas and yogas. The
-// server works it out from the profile; it is shown only here (the oracle gets a
-// summary in words).
-import { el, sleep, prefersReducedMotion } from "./util.js";
-
-const $ = (id) => document.getElementById(id);
+// The jataka: a Vedic birth chart, drawn in the South Indian style, with the dashas,
+// Shani's transits around the Moon, gochar, doshas and yogas. The server works it out
+// from the birth details; the full chart is shown only on this device (the reader gets
+// a summary in words).
+import { el, sleep, prefersReducedMotion, deva, ordinal, parseDate, monthYear } from "./util.js";
 
 // South Indian chart: the rashis sit in fixed boxes around the edge, Meena top-left,
 // running clockwise. [row, column] for each sign index (Mesha = 0).
@@ -24,23 +22,9 @@ const VARGAS = {
 };
 const STATUS_LABELS = { present: "Present", mild: "Mild", cancelled: "Cancelled", absent: "Not present" };
 
-const ordinal = (n) => `${n}${{ 1: "st", 2: "nd", 3: "rd" }[n] || "th"}`;
-
-function parseDate(iso) {
-    const [y, m, d] = iso.split("-").map(Number);
-    return new Date(y, m - 1, d);
-}
-
-const monthYear = (iso) => parseDate(iso).toLocaleDateString(undefined, { month: "short", year: "numeric" });
 const fullDate = (iso) =>
     parseDate(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 const span = (p) => `${monthYear(p.start)} – ${monthYear(p.end)}`;
-
-function deva(text, cls = "deva") {
-    const node = el("span", cls, text);
-    node.lang = "sa";
-    return node;
-}
 
 // 12.34 -> "12°20′"
 function dms(degree) {
@@ -90,7 +74,7 @@ export function southChart(jataka, { varga = "rasi", lords = [], caption = null,
     return chart;
 }
 
-const lordKeys = (jataka, names) =>
+export const lordKeys = (jataka, names) =>
     names.map((name) => jataka.grahas.find((g) => g.name === name)?.key).filter(Boolean);
 
 // On the table, after a jataka reading: the grahas take their places one by one,
@@ -128,12 +112,7 @@ export async function revealJataka(tray, legend, jataka, dasha, { onPlace } = {}
     await sleep(400);
 }
 
-// --- The panel ---
-
-let lastFocus = null;
-let current = null;
-let varga = "rasi";
-let addDetails = () => {};
+// --- The full jataka, section by section ---
 
 function heading(text, devanagari) {
     const h = el("h3", "jataka-heading", text);
@@ -347,83 +326,51 @@ function yogaSection(yogas) {
     return section;
 }
 
-function chartSection(jataka) {
+// The chart with a Rasi / Navamsa switch
+export function chartSection(jataka, caption) {
     const section = el("section", "jataka-section chart-section");
-    const toggle = el("div", "oracle-picker varga-toggle");
+    const toggle = el("div", "seg");
     toggle.setAttribute("role", "group");
     toggle.setAttribute("aria-label", "Chart");
+    const now = jataka.dasha.current;
+    const names = now ? [now.mahadasha.lord, now.antardasha.lord] : [];
+    let chart = null;
+    const draw = (varga) => {
+        const next = southChart(jataka, { varga, lords: lordKeys(jataka, names), caption });
+        if (chart) chart.replaceWith(next);
+        chart = next;
+        for (const b of toggle.children) b.setAttribute("aria-pressed", String(b.dataset.varga === varga));
+    };
     for (const [key, { title }] of Object.entries(VARGAS)) {
         const btn = el("button", null, title);
         btn.type = "button";
-        btn.setAttribute("aria-pressed", String(key === varga));
-        btn.addEventListener("click", () => {
-            varga = key;
-            render();
-        });
+        btn.dataset.varga = key;
+        btn.addEventListener("click", () => draw(key));
         toggle.append(btn);
     }
-    const now = jataka.dasha.current;
-    const names = now ? [now.mahadasha.lord, now.antardasha.lord] : [];
-    section.append(
-        toggle,
-        southChart(jataka, { varga, lords: lordKeys(jataka, names), caption: `${jataka.lagna.name} lagna` }),
-        el("p", "hint chart-key", "La = lagna · R = retrograde · the running dasha lords glow")
-    );
+    section.append(toggle);
+    draw("rasi");
+    section.insertBefore(chart, null);
+    section.append(el("p", "hint chart-key", "La = lagna · R = retrograde · the running dasha lords are marked"));
     return section;
 }
 
-function render() {
-    const body = $("jataka-body");
-    if (!current) {
-        const add = el("button", "btn-unlock", "Add birth time and place");
-        add.type = "button";
-        add.addEventListener("click", addDetails);
-        body.replaceChildren(
-            el(
-                "p",
-                "jataka-line",
-                "A jataka is drawn for the moment and place of birth. Add your birth time and " +
-                    "birth place under ☉ You, and your chart, dashas and doshas will appear here."
-            ),
-            add
-        );
-        return;
-    }
-    const scroll = $("jataka-panel").scrollTop;
-    body.replaceChildren(
-        chartSection(current),
+// Everything below the chart, for a person's page
+export function jatakaSections(jataka) {
+    return [
         heading("The grahas", "ग्रह"),
-        grahaTable(current),
-        dashaSection(current.dasha),
-        shaniSection(current.sade_sati),
-        gocharSection(current.transits),
-        doshaSection(current.doshas),
-        yogaSection(current.yogas),
-        el("p", "hint jataka-conventions", `Worked out with the ${current.conventions}. If your jyotishi's chart differs slightly, these choices are usually why.`)
-    );
-    $("jataka-panel").scrollTop = scroll;
+        grahaTable(jataka),
+        dashaSection(jataka.dasha),
+        shaniSection(jataka.sade_sati),
+        gocharSection(jataka.transits),
+        doshaSection(jataka.doshas),
+        yogaSection(jataka.yogas),
+        el(
+            "p",
+            "hint",
+            `Worked out with the ${jataka.conventions}. If your jyotishi's chart differs slightly, these choices are usually why.`
+        ),
+    ];
 }
 
-// onAddDetails: open the profile form, for a querent without birth time and place
-export function openPanel(jataka, { onAddDetails } = {}) {
-    current = jataka;
-    addDetails = onAddDetails || (() => {});
-    render();
-    lastFocus = document.activeElement;
-    $("jataka-panel").hidden = false;
-    $("jataka-panel").scrollTop = 0;
-    $("jataka-close").focus();
-}
-
-export function closePanel() {
-    if ($("jataka-panel").hidden) return;
-    $("jataka-panel").hidden = true;
-    lastFocus?.focus?.();
-}
-
-export function initPanel() {
-    $("jataka-close").addEventListener("click", closePanel);
-    $("jataka-panel").addEventListener("click", (e) => {
-        if (e.target === $("jataka-panel")) closePanel();
-    });
-}
+export { doshaSection, yogaSection, dashaSection, shaniSection };
