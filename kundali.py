@@ -176,11 +176,21 @@ def graha_longitude(key: str, when: datetime) -> float:
     return (ecliptic_longitude(key, when) - ayanamsa(when)) % 360
 
 
+# Skyfield needs about 45 KB of working memory per instant in a vector, so long
+# vectors are worked through in batches (18,000 at once would take ~700 MB, more than
+# a small server has)
+SERIES_BATCH = 1000
+
+
 def _series(key: str, t: Any) -> Any:
     """Sidereal longitudes for a vector of Skyfield times."""
     if key in ("rahu", "ketu"):
         rahu = (mean_rahu_tropical(t.tt) - _ayanamsa_tt(t.tt)) % 360
         return rahu if key == "rahu" else (rahu + 180) % 360
+    if t.shape and t.shape[0] > SERIES_BATCH:
+        return np.concatenate(
+            [_series(key, t[i:i + SERIES_BATCH]) for i in range(0, t.shape[0], SERIES_BATCH)]
+        )
     _, eph = _ephemeris()
     position = eph["earth"].at(t).observe(eph[BODIES[key]]).apparent(deflectors=(10,))
     _, lon, _ = position.frame_latlon(ecliptic_frame)

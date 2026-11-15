@@ -305,3 +305,17 @@ def test_yogas():
     # Guru in Simha is the 4th from a Vrishabha Moon; Budh joins Surya in Mesha;
     # Mangal exalted in Makara, the 10th from a Mesha lagna
     assert {"Gaja Kesari yoga", "Budhaditya yoga", "Ruchaka yoga"} <= names
+
+
+def test_long_vectors_are_batched_without_changing_positions(monkeypatch):
+    # Batching keeps memory small on a small server; the answers must not change
+    import numpy as np
+
+    import kundali
+    from astrology import _ephemeris
+
+    ts, _ = _ephemeris()
+    t = ts.utc(2000, 1, 1 + np.arange(25))
+    whole = kundali._series("saturn", t)
+    monkeypatch.setattr(kundali, "SERIES_BATCH", 7)
+    assert np.allclose(kundali._series("saturn", t), whole)
