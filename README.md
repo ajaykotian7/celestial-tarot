@@ -351,6 +351,10 @@ Works out a person's signs, numbers, Vedic chart, jataka and timeline, plus the 
 
   A sign that changed during a birthday with no birth time comes back with `"alternatives": ["Pisces", "Aries"]`. `rising` and `vedic.lagna` need both birth time and place, and `vedic.nakshatra.pada` needs a birth time. Without one, a rashi or nakshatra that changed during the birthday comes back as `{"alternatives": [...]}`.
 
+### `GET /api/health`
+
+`{"uptime_seconds": 120, "memory_mb": 123, "transit_tables_ready": true}`, for checking the server from outside. No passphrase, no personal data.
+
 ### `GET /api/sky`
 
 The current moon phase, astrological season, Mercury's motion and the panchang for this instant. No passphrase. Query: `local_date` (optional).
