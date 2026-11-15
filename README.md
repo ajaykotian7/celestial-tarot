@@ -382,7 +382,7 @@ Main conversational endpoint. Runs the GPT-4o function-calling loop and returns 
     "tldr": "Core takeaway summary..."
   }
   ```
-- **Errors:** `401` invalid PIN, `422` invalid body (empty or too-long message, unknown role, invalid `local_hour`, profile or journal fields out of range), `429` rate limit exceeded (5 requests/minute per IP), `500` missing API key or a failed reading (details are logged on the server, not returned).
+- **Errors:** `401` invalid PIN, `422` invalid body (empty or too-long message, unknown role, invalid `local_hour`, profile or journal fields out of range), `429` rate limit exceeded (5 requests/minute per IP), `500` missing API key or a failed reading (details are logged on the server, not returned), `503` when OpenAI rejects the API key (expired or revoked), the account is out of credit, or OpenAI is rate limiting; the `detail` says which, in plain words.
 
   When the jataka was read, `jataka` names the dasha lords running now, e.g. `{"mahadasha": "Chandra", "antardasha": "Chandra", "pratyantardasha": "Budh"}` (otherwise it is `null`); the browser draws the chart from `/api/insights`.
 

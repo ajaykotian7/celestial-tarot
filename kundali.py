@@ -850,9 +850,32 @@ def _month(d: date) -> str:
     return d.strftime("%b %Y")
 
 
+def house_lordships(lagna_sign: int) -> Dict[str, List[int]]:
+    """The houses each graha rules, counted from the lagna (Rahu and Ketu rule none)."""
+    ruled: Dict[str, List[int]] = {key: [] for key in PLANETS}
+    for house in range(1, 13):
+        ruled[SIGN_LORDS[(lagna_sign + house - 1) % 12]].append(house)
+    return ruled
+
+
+def _and(items: List[str]) -> str:
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
+
+
 def jataka_summary(j: Dict[str, Any], birth_date: date, today: date) -> str:
     def shown(d: date) -> bool:
         return d.year > birth_date.year
+
+    ruled = house_lordships(j["lagna"]["sign"])
+    house_of = {x["key"]: x["house"] for x in j["grahas"]}
+
+    def role(key: str) -> str:
+        """'lord of the 10th, in the 6th'"""
+        rules = ruled.get(key)
+        where = f"in the {ordinal(house_of[key])}"
+        if not rules:
+            return where
+        return f"lord of the {_and([ordinal(h) for h in rules])}, {where}"
 
     lagna = j["lagna"]
     lines = [f"Lagna: {lagna['name']} ({lagna['western']}), ruled by {lagna['lord']}."]
@@ -865,6 +888,15 @@ def jataka_summary(j: Dict[str, Any], birth_date: date, today: date) -> str:
             text += f" ({', '.join(flags)})"
         placements.append(text)
     lines.append("Grahas: " + "; ".join(placements) + ".")
+    lines.append(
+        "House lords: "
+        + "; ".join(
+            f"{graha_name(key)} rules the {_and([ordinal(h) for h in houses])}"
+            for key, houses in ruled.items()
+            if houses
+        )
+        + "."
+    )
     moon = next(x for x in j["grahas"] if x["key"] == "moon")
     lines.append(f"Moon nakshatra: {moon['nakshatra']} pada {moon['pada']}.")
 
@@ -873,9 +905,9 @@ def jataka_summary(j: Dict[str, Any], birth_date: date, today: date) -> str:
     if current:
         md, ad, pd = current["mahadasha"], current["antardasha"], current["pratyantardasha"]
         lines.append(
-            f"Running now: {md['lord']} mahadasha (until {_month(md['end'])}), "
-            f"{ad['lord']} antardasha (until {_month(ad['end'])}), "
-            f"{pd['lord']} pratyantardasha (until {_month(pd['end'])})."
+            f"Running now: {md['lord']} mahadasha ({role(md['key'])}; until {_month(md['end'])}), "
+            f"{ad['lord']} antardasha ({role(ad['key'])}; until {_month(ad['end'])}), "
+            f"{pd['lord']} pratyantardasha ({role(pd['key'])}; until {_month(pd['end'])})."
         )
         all_ads = [
             (m["lord"], a) for m in dasha["mahadashas"] for a in m["antardashas"]
@@ -887,7 +919,7 @@ def jataka_summary(j: Dict[str, Any], birth_date: date, today: date) -> str:
             if shown(a["start"])
         ]
         upcoming = [
-            f"{m}–{a['lord']} ({_month(a['start'])}–{_month(a['end'])})"
+            f"{m}–{a['lord']} ({_month(a['start'])}–{_month(a['end'])}; {a['lord']} is {role(a['key'])})"
             for m, a in all_ads[now_index + 1:now_index + 7]
         ]
         if past:
@@ -911,7 +943,10 @@ def jataka_summary(j: Dict[str, Any], birth_date: date, today: date) -> str:
         if t["until"]:
             text += f", until {_month(t['until'])}"
         gochar.append(text)
-    lines.append("Transits now (gochar): " + "; ".join(gochar) + ".")
+    lines.append(
+        "Transits now (gochar: where these grahas are moving today, not their places at "
+        "birth): " + "; ".join(gochar) + "."
+    )
 
     ss = j["sade_sati"]
     if ss["current"]:

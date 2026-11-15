@@ -1,6 +1,7 @@
 import json
 from types import SimpleNamespace
 
+import openai
 import pytest
 from fastapi.testclient import TestClient
 
@@ -652,3 +653,42 @@ def test_a_failing_jataka_leaves_the_rest_of_the_profile(http, monkeypatch):
     insights = http.post("/api/insights", json={"profile": PROFILE}).json()["insights"]
     assert insights["jataka"] is None
     assert insights["vedic"]["rashi"]["name"] == "Meena"
+
+
+def openai_error(cls, status, code):
+    import httpx
+
+    response = httpx.Response(
+        status, request=httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
+    )
+    return cls("secret upstream detail", response=response, body={"code": code})
+
+
+class RaisingCompletions:
+    def __init__(self, error):
+        self.error = error
+
+    async def create(self, **kwargs):
+        raise self.error
+
+
+@pytest.mark.parametrize(
+    "error, message",
+    [
+        (lambda: openai_error(openai.AuthenticationError, 401, "expired_secret_key"), app_module.KEY_PROBLEM),
+        (lambda: openai_error(openai.RateLimitError, 429, "insufficient_quota"), app_module.OUT_OF_CREDIT),
+        (lambda: openai_error(openai.RateLimitError, 429, "rate_limit_exceeded"), app_module.TOO_BUSY),
+    ],
+)
+def test_openai_key_and_credit_problems_are_named_without_details(http, monkeypatch, error, message):
+    monkeypatch.setattr(
+        app_module,
+        "client",
+        SimpleNamespace(chat=SimpleNamespace(completions=RaisingCompletions(error()))),
+    )
+
+    res = chat(http)
+
+    assert res.status_code == 503
+    assert res.json()["detail"] == message
+    assert "secret" not in res.text

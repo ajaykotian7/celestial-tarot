@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, AuthenticationError, PermissionDeniedError, RateLimitError
 from pydantic import BaseModel, Field
 
 from astrology import current_sky
@@ -101,7 +101,9 @@ SYSTEM_PROMPT = (
     "Soften difficult cards and emphasise hope and the querent's own agency, without "
     "hiding what the cards say.\n"
     "When answering a query or drawing cards:\n"
-    "1. Detail individual cards and interactions.\n"
+    "1. Detail what was drawn or read (each card, heap or graha) and how they interact. "
+    "Mention only cards, cowries or grahas that were actually drawn, cast or read in "
+    "this conversation; never invent any.\n"
     "2. Match the length to the question: a few short paragraphs for a simple question "
     "or a single card, a fuller reading for a complex question, and a thorough one for "
     "a Celtic Cross. Keep follow-up answers brief.\n"
@@ -111,6 +113,14 @@ SYSTEM_PROMPT = (
 )
 
 EMPTY_REPLY_FALLBACK = "The cards are quiet right now. Please ask your question again."
+
+# Problems the keeper of the app can fix, so worth naming (without any detail)
+KEY_PROBLEM = (
+    "The oracle's OpenAI key has expired or been revoked. Whoever looks after this app "
+    "needs to set a new one."
+)
+OUT_OF_CREDIT = "The oracle's OpenAI credit has run out. Whoever looks after this app needs to top it up."
+TOO_BUSY = "The oracle is overwhelmed right now. Please try again in a minute."
 
 SPREAD_SIZING = (
     "Size the spread to the question: single_card for a simple or yes/no question, "
@@ -127,12 +137,16 @@ KAUDI_READING = (
 )
 
 JATAKA_READING = (
-    "Answer from their jataka: the mahadasha, antardasha and pratyantardasha running now "
-    "and what their lords occupy and rule in the chart, the transits from the Moon (Sade "
-    "Sati, Guru, Rahu and Ketu), the natal houses that bear on the question, and any "
-    "doshas or yogas that matter to it. Name the houses and grahas you are reading from, "
-    "in plain words. Give timing as the periods in the jataka (for example 'from the "
-    "Guru antardasha in 2029'), as tendencies, never certainties. Never predict death, "
+    "This reading is from their jataka alone: no tarot cards or cowries are drawn, so "
+    "never mention or invent any. Answer from the mahadasha, antardasha and pratyantardasha "
+    "running now and the houses their lords rule and occupy, the transits from the Moon "
+    "and lagna (Sade Sati, Guru, Rahu and Ketu), the natal houses that bear on the "
+    "question and their lords (for work and money: the 10th, the 11th of gains, the 2nd "
+    "of wealth and the 6th of service; for marriage: the 7th, its lord and Shukra), and "
+    "any doshas or yogas that matter to it. Name the houses and grahas you are reading "
+    "from, in plain words. When they ask when, name the specific coming periods and "
+    "transits in the jataka that best support it and say why, as tendencies, never "
+    "certainties. Never predict death, "
     "serious illness, accidents or the end of a marriage, and never frighten: when a dosha "
     "or a hard period comes up, say what it traditionally means, any cancellations, and "
     "when it eases. Never recommend gemstones or paid pujas; if a remedy fits, offer a "
@@ -782,6 +796,15 @@ async def chat_endpoint(
             "tldr": tldr_summary,
         }
 
+    except (AuthenticationError, PermissionDeniedError):
+        logger.exception("OpenAI rejected the API key")
+        raise HTTPException(status_code=503, detail=KEY_PROBLEM)
+    except RateLimitError as e:
+        logger.exception("OpenAI rate limit or quota")
+        raise HTTPException(
+            status_code=503,
+            detail=OUT_OF_CREDIT if e.code == "insufficient_quota" else TOO_BUSY,
+        )
     except Exception:
         # Full details go to the server log only; the client gets a generic message
         logger.exception("Error during /api/chat execution")

@@ -167,6 +167,9 @@ def test_no_jataka_without_birth_time_and_place(kwargs):
 def test_summary_gives_nothing_away(sample):
     text = jataka_summary(sample, BIRTH, TODAY)
     assert "Tula" in text and "Chandra mahadasha" in text and "Sade Sati is running" in text
+    # For a Tula lagna, Karka is the 10th house: the Moon's dasha is about career
+    assert "Chandra rules the 10th" in text and "Mangal rules the 2nd and 7th" in text
+    assert "Chandra mahadasha (lord of the 10th, in the 6th;" in text
     for private in ("1990", "°", "Kolkata", "14:30", "27.7"):
         assert private not in text
 
