@@ -1,9 +1,15 @@
-import asyncio
+import os
+
+# One thread for numpy's maths libraries: a small server has a fraction of one CPU, and
+# a thread per host core would only fight over it. Set before numpy is first imported.
+for _var in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS"):
+    os.environ.setdefault(_var, "1")
+
+import asyncio  # noqa: E402
 import datetime as dt
 import hmac
 import json
 import logging
-import os
 import time
 from collections import Counter
 from contextlib import asynccontextmanager
@@ -22,7 +28,7 @@ from festivals import calendar as festival_calendar
 from festivals import upcoming
 from jyotish import NAKSHATRAS, RASHIS, panchang
 from kaudi import cast_kaudi, kaudi_tool
-from kundali import current_line, graha_longitude, jataka_summary, sign_ingresses
+from kundali import _sign_ingresses, current_line, graha_longitude, jataka_summary, sign_ingresses
 from matching import ashtakoota, moon_for_matching
 from muhurta import ACTIVITIES, day_periods, guidance, muhurat, natal_moon, personal_day, sun_times
 from personal import daily_card, derive_insights
@@ -763,6 +769,26 @@ def service_worker():
 @app.get("/manifest.webmanifest")
 def manifest():
     return FileResponse("static/manifest.webmanifest", media_type="application/manifest+json")
+
+
+STARTED = time.monotonic()
+
+
+@app.get("/api/health")
+def health():
+    """For checking the server from outside: how long it has been up, its memory, and
+    whether the transit tables are built. No personal data."""
+    try:
+        with open("/proc/self/status") as f:
+            rss = next(int(line.split()[1]) // 1024 for line in f if line.startswith("VmRSS"))
+    except (OSError, StopIteration):
+        rss = None
+    return {
+        "uptime_seconds": round(time.monotonic() - STARTED),
+        "memory_mb": rss,
+        # Shani, Guru and Rahu
+        "transit_tables_ready": _sign_ingresses.cache_info().currsize >= 3,
+    }
 
 
 @app.post("/api/verify-pin")

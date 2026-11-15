@@ -806,3 +806,9 @@ def test_match_endpoint(http):
 def test_match_without_a_birth_date_explains(http):
     res = post(http, "/api/match", {"bride": {"name": "Meera"}, "groom": PROFILE})
     assert res.status_code == 422 and "Meera" in res.json()["detail"]
+
+
+def test_health_reports_without_personal_data(http):
+    body = http.get("/api/health").json()
+    assert set(body) == {"uptime_seconds", "memory_mb", "transit_tables_ready"}
+    assert body["uptime_seconds"] >= 0

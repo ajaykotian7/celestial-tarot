@@ -15,6 +15,7 @@ so each one says what was found and why, rather than issuing a verdict.
 
 import bisect
 import copy
+import threading
 from datetime import date, datetime, time, timedelta, timezone
 from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple
@@ -178,8 +179,10 @@ def graha_longitude(key: str, when: datetime) -> float:
 
 # Skyfield needs about 45 KB of working memory per instant in a vector, so long
 # vectors are worked through in batches (18,000 at once would take ~700 MB, more than
-# a small server has)
-SERIES_BATCH = 1000
+# a small server has), and only one batch at a time across all requests: on a small
+# server, parallel requests would otherwise add their peaks together
+SERIES_BATCH = 500
+_ephemeris_lock = threading.Lock()
 
 
 def _series(key: str, t: Any) -> Any:
@@ -192,13 +195,25 @@ def _series(key: str, t: Any) -> Any:
             [_series(key, t[i:i + SERIES_BATCH]) for i in range(0, t.shape[0], SERIES_BATCH)]
         )
     _, eph = _ephemeris()
-    position = eph["earth"].at(t).observe(eph[BODIES[key]]).apparent(deflectors=(10,))
-    _, lon, _ = position.frame_latlon(ecliptic_frame)
+    with _ephemeris_lock:
+        position = eph["earth"].at(t).observe(eph[BODIES[key]]).apparent(deflectors=(10,))
+        _, lon, _ = position.frame_latlon(ecliptic_frame)
     return (lon.degrees - _ayanamsa_tt(t.tt)) % 360
 
 
-@lru_cache(maxsize=None)
+_ingress_lock = threading.Lock()
+
+
 def sign_ingresses(key: str) -> Tuple[Tuple[date, int], ...]:
+    """Every day the graha entered a new sidereal sign (see _sign_ingresses). Built
+    once; requests that arrive while it is being built wait for it rather than each
+    building their own."""
+    with _ingress_lock:
+        return _sign_ingresses(key)
+
+
+@lru_cache(maxsize=None)
+def _sign_ingresses(key: str) -> Tuple[Tuple[date, int], ...]:
     """Every day the graha entered a new sidereal sign, 1900-2099, retrograde
     re-entries included, as (date, sign index). Days are in Indian Standard Time, as
     in Indian panchangs. The first entry is the sign it was in when the ephemeris
